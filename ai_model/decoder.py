@@ -32,6 +32,9 @@ class DecoderInitializer(tf.keras.layers.Layer):
         self.fc_c = tf.keras.layers.Dense(dec_units, activation='tanh')
         self.fc_h = tf.keras.layers.Dense(dec_units, activation='tanh')
 
+    def build(self, input_shape):
+        super().build(input_shape)
+
     def call(self, inputs: DecoderInitializerInput, state=None) -> DecoderState:
         return DecoderState(
             state_h=self.fc_h(inputs.state_h),
@@ -50,6 +53,9 @@ class Decoder(tf.keras.layers.Layer):
         self.attention = AttentionAggregator2D(self.dec_units)
         self.fc = tf.keras.layers.Dense(seq_dim, activation='linear')
 
+    def build(self, input_shape):
+        super().build(input_shape)
+        
     def call(self, inputs: DecoderInput, state: DecoderState) -> DecoderOutput:
         shape_checker = ShapeChecker()
         shape_checker(inputs.new_tokens, ('batch', 't', 'dim'))

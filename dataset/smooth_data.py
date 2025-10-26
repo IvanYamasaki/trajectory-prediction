@@ -10,9 +10,9 @@ class Smoother:
     ball_smoother = KalmanSmoother()
 
     def __init__(self):
-        self.position_smoother.load_params('position_series_params')
-        self.psi_smoother.load_params('heading_series_params')
-        self.ball_smoother.load_params('ball_positions_series_params')
+        self.position_smoother.load_params('dataset/position_series_params')
+        self.psi_smoother.load_params('dataset/heading_series_params')
+        self.ball_smoother.load_params('dataset/ball_positions_series_params')
 
     def smooth_psi(self, psi, mask):
         psi_sin = np.sin(psi)

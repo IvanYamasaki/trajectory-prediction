@@ -1,3 +1,22 @@
+# Logs e arquivos compactados originais
 *.log
 *.gz
+
+# Arquivos de bytecode e caches
 __pycache__/
+*.pyc
+*.pyo
+
+# Ambientes virtuais
+/venv
+/env
+.vscode/
+
+# Arquivos de modelos e pesos (NOVOS)
+*.weights.h5
+*.h5
+
+# Arquivos de dados e processamento (NOVOS)
+*.pkl
+*.deb
+*.exe

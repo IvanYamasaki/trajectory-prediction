@@ -2,11 +2,11 @@ from .read_logs import process_log
 from .smoother_params import get_ball_position_series_params, get_robot_position_series_params, get_robot_heading_series_params
 from .smooth_data import Smoother
 
-# Lista dos seus arquivos de log (sem a extensão .log)
-data_set_files = ['treino_1', 'treino_2', 'treino_3', 'treino_4', 'teste_1']
+data_set_files = ['data_set_1', 'data_set_2', 'data_set_3', 'data_set_4']
+processed_data_files = ['proc_set_1', 'proc_set_2', 'proc_set_3', 'proc_set_4']
 
-# Lista CORRIGIDA dos nomes dos arquivos de saída processados
-processed_data_files = ['proc_treino_1', 'proc_treino_2', 'proc_treino_3', 'proc_treino_4', 'proc_teste_1']
+data_set_files = ['data_set_4']
+processed_data_files = ['proc_set_4']
 
 print("---- Lendo arquivos de log brutos ----")
 for file in data_set_files:

@@ -91,11 +91,15 @@ def process_log(path):
 
     while reader.has_next():
         msg_type = reader.decode_msg()
-        if msg_type == MessageType.MESSAGE_SSL_VISION_2010 or msg_type == MessageType.MESSAGE_SSL_VISION_2014:
+        if msg_type == MessageType.MESSAGE_SSL_VISION_2010 or \
+                msg_type == MessageType.MESSAGE_SSL_VISION_2014 or \
+                msg_type == MessageType.MESSAGE_SSL_VISION_TRACKER_2020:
+            
             wrapper_packet = reader.get_wrapper_packet()
             
-            # Adicione esta verificação de segurança
+           # Adicione esta verificação de segurança
             if wrapper_packet is None or wrapper_packet.detection is None:
+
                 continue
 
             # We discard the first packet to decrease noise
@@ -134,5 +138,5 @@ def process_log(path):
                 robots_b = {}
                 robots_y = {}
                 ball = {'x': [], 'y': [], 'z': [], 'time_c': [], 'mask': []}
-    with open(path + '.pkl', 'wb') as f:
+    with open('dataset/' + path + '.pkl', 'wb') as f:
         pickle.dump(all_data, f)

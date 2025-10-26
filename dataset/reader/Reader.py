@@ -36,17 +36,22 @@ class Reader:
 
     def decode_msg(self):
         byte = self.file.read(self.msg_size)
+        self.wrapper_packet = None
+        self.referee_packet = None
 
-        if self.msg_type == MessageType.MESSAGE_SSL_VISION_2010.value or \
-                self.msg_size == MessageType.MESSAGE_SSL_VISION_2014.value:
-            self.wrapper_packet = SSL_Wrapper.SSL_WrapperPacket()
-            self.wrapper_packet.ParseFromString(byte)
-        elif self.msg_type == MessageType.MESSAGE_SSL_REFBOX_2013.value:
-            self.referee_packet = SSL_referee.SSL_Referee()
-            self.referee_packet.ParseFromString(byte)
+        try:
+            if self.msg_type == MessageType.MESSAGE_SSL_VISION_2010.value or \
+                    self.msg_type == MessageType.MESSAGE_SSL_VISION_2014.value or \
+                    self.msg_type == MessageType.MESSAGE_SSL_VISION_TRACKER_2020.value: 
+                self.wrapper_packet = SSL_Wrapper.SSL_WrapperPacket()
+                self.wrapper_packet.ParseFromString(byte)
+            elif self.msg_type == MessageType.MESSAGE_SSL_REFBOX_2013.value:
+                self.referee_packet = SSL_referee.SSL_Referee()
+                self.referee_packet.ParseFromString(byte)
+        except message.DecodeError:
+            pass
 
         return MessageType(self.msg_type)
-
     def get_referee_packet(self):
         return self.referee_packet
 

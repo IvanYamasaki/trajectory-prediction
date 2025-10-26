@@ -50,13 +50,13 @@ class KalmanSmoother:
 
     def fit_for_series(self, x, y, mask, lr, niter):
         t = np.stack([x, y], axis=1)
-        K_pos = np.array(mask, dtype=np.bool)
+        K_pos = np.array(mask, dtype=bool)
         K = np.repeat(K_pos[:, None], 2, axis=1)
         self.params, _ = auto_ks.tune(self.params_initial, self.prox, t, K, self.lam, lr=lr, verbose=False, niter=niter)
 
     def smooth(self, x, y, mask):
         t = np.stack([x, y], axis=1)
-        K_pos = np.array(mask, dtype=np.bool)
+        K_pos = np.array(mask, dtype=bool)
         K = np.repeat(K_pos[:, None], 2, axis=1)
 
         return auto_ks.kalman_smoother(self.params, t, K, self.lam)
@@ -71,7 +71,7 @@ class KalmanSmoother:
         plt.show()
 
     def save_params(self, file_name):
-        with open(file_name + '.pkl', 'wb') as f:
+        with open('dataset/' + file_name + '.pkl', 'wb') as f:
             pickle.dump(self.params, f)
 
     def load_params(self, file_name):

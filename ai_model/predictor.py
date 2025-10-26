@@ -18,6 +18,11 @@ class Predictor(tf.keras.Model):
         self.use_tf_function = use_tf_function
         self.shape_checker = ShapeChecker()
         self.forcing = forcing
+    def build(self, input_shape):
+        self.encoder.build(input_shape)
+        self.decoder_init.build(input_shape)
+        self.decoder.build((None, self.look_forth + 1)) 
+        super().build(input_shape)
 
     def _decoder_step(self, decoder_output, target_pos):
         self.shape_checker(decoder_output.sequence, ('batch', 't'))
@@ -45,7 +50,7 @@ class Predictor(tf.keras.Model):
         self.save_weights(name + '.weights.h5')
 
     def load_model(self, name):
-        self.load_weights(name).expect_partial()
+        self.load_weights(name + '.weights.h5')
 
     def _forecast(self, input_seq):
         pass

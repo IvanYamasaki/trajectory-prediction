@@ -6,6 +6,7 @@ import numpy as np
 # Define o arquivo que será usado para aprender os parâmetros do filtro.
 # Usamos o primeiro arquivo do seu novo conjunto de dados de treino.
 PARAMETER_LEARNING_FILE = 'dataset/treino_1.pkl'
+
 def get_robots():
     """Carrega o arquivo de dados e pega os primeiros robôs de cada time."""
     with open(PARAMETER_LEARNING_FILE, 'rb') as f:
