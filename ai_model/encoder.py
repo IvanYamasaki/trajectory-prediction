@@ -1,15 +1,15 @@
 import typing
 import tensorflow as tf
 from .shape_checker import ShapeChecker
+import collections
 
-
-class EncoderOutput(typing.NamedTuple):
-    sequence: typing.Any
-    state_h: typing.Any
-    state_c: typing.Any
-    state_hb: typing.Any
-    state_cb: typing.Any
-
+EncoderOutput = collections.namedtuple('EncoderOutput', [
+    'sequence',
+    'state_h',
+    'state_c',
+    'state_hb',
+    'state_cb',
+])
 
 class Encoder(tf.keras.layers.Layer):
     def __init__(self, enc_units):
@@ -40,16 +40,17 @@ class Encoder(tf.keras.layers.Layer):
         )
 
 
-class BallEncoderInput(typing.NamedTuple):
-    sequence: typing.Any
-    mask: typing.Any
+BallEncoderInput = collections.namedtuple('BallEncoderInput', [
+    'sequence',
+    'mask',
+])
 
 
-class BallEncoderOutput(typing.NamedTuple):
-    sequence: typing.Any
-    state_h: typing.Any
-    state_c: typing.Any
-
+BallEncoderOutput = collections.namedtuple('BallEncoderOutput', [
+    'sequence',
+    'state_h',
+    'state_c',
+])
 
 class BallEncoder(tf.keras.layers.Layer):
     def __init__(self, enc_units):
