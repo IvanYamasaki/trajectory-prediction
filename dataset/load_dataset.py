@@ -185,14 +185,27 @@ class LoadDataSet:
     def process_points(self, robot_pair, data_x, data_y, ball_x, ball_data, stop_id, time_c, mask, y_dim):
         for i in range(len(robot_pair) - self.look_back - self.look_forth):
             time_id = time_c[min(i+self.look_back, len(time_c))]
-            ball_sorted_data, ball_mask = self.get_ball_data(ball_data, stop_id, time_id)
-            ball_sorted_data = (ball_sorted_data - self.ball_avg) / self.ball_std
+            
+            ball_data_unnorm, ball_mask = self.get_ball_data(ball_data, stop_id, time_id)
+            
+            robot_vx = robot_pair[i:(i + self.look_back), 2] 
+            robot_vy = robot_pair[i:(i + self.look_back), 3]
+
+            relative_vx = robot_vx - ball_data_unnorm[:, 2]
+            relative_vy = robot_vy - ball_data_unnorm[:, 3]
+
+            ball_pos_x = ball_data_unnorm[:, 0]
+            ball_pos_y = ball_data_unnorm[:, 1]
+            ball_sorted_data_relative = np.stack([ball_pos_x, ball_pos_y, relative_vx, relative_vy]).T
+
+            ball_sorted_data_norm = (ball_sorted_data_relative - self.ball_avg) / self.ball_std
+            
             x_set = (robot_pair[i:(i + self.look_back), 0:5] - self.robots_avg[0:5]) / self.robots_std[0:5]
             y_set = (robot_pair[(i+self.look_back - 1):(i + self.look_back + self.look_forth-1), y_dim:4]
                      - self.robots_avg[y_dim:4])/self.robots_std[y_dim:4]
             data_x.append(x_set)
             data_y.append(y_set)
-            ball_x.append(ball_sorted_data)
+            ball_x.append(ball_sorted_data_norm)
             mask.append(ball_mask)
 
     def prepare_single_trajectory_for_test(self, robot_data, ball_data, index):
