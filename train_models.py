@@ -11,7 +11,7 @@ from comparison_tests import MLPComparison
 
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-files = ['dataset/proc_treino_1', 'dataset/proc_treino_2', 'dataset/proc_treino_3', 'dataset/proc_treino_4']
+files = ['dataset/proc_set_1', 'dataset/proc_set_2']
 
 def plots(logs):
     plt.figure()

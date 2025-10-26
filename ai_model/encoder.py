@@ -18,6 +18,9 @@ class Encoder(tf.keras.layers.Layer):
         self.lstm_config = tf.keras.layers.LSTM(enc_units, return_state=True, return_sequences=True)
         self.bi_lstm = tf.keras.layers.Bidirectional(self.lstm_config)
 
+    def build(self, input_shape):
+        super().build(input_shape)
+
     def call(self, sequence, state=None):
         shape_checker = ShapeChecker()
         shape_checker(sequence, ('batch', 'look_back', 'coordinates'))
@@ -59,6 +62,9 @@ class BallEncoder(tf.keras.layers.Layer):
         self.lstm_config = tf.keras.layers.LSTM(self.enc_units, return_state=True, return_sequences=True)
         self.bi_lstm = tf.keras.layers.Bidirectional(self.lstm_config)
 
+    def build(self, input_shape):
+        super().build(input_shape)
+        
     def call(self, inputs: BallEncoderInput, state=None):
         shape_checker = ShapeChecker()
         shape_checker(inputs.sequence, ('batch', 'look_back', 'coordinates'))
