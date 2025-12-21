@@ -26,6 +26,8 @@ def plots(logs):
 def train_models(look_back, look_forth, output_dims, robot_model_name, ball_model_name):
     loader = LoadDataSet(look_back, look_forth)
     robot_x, ball_x, ball_mask, y = loader.load_data(files, for_test=False)
+    loader.save_params('dataset/norm_params')
+    
 
     lr = 0.001
     lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
@@ -37,7 +39,7 @@ def train_models(look_back, look_forth, output_dims, robot_model_name, ball_mode
     seq_predictor = RobotOnlyPredictor(look_back, look_back, look_forth, output_dims, use_tf_function=True, forcing=False)
     seq_predictor.compile(optimizer=tf.optimizers.Adam(learning_rate=lr_schedule), loss=SequenceLoss(), run_eagerly=False)
     batch_logs = BatchLogs()
-    seq_predictor.fit(robot_x, y, epochs=10, batch_size=1024, callbacks=[batch_logs], validation_split=0.1)
+    seq_predictor.fit(robot_x, y, epochs=1, batch_size=512, callbacks=[batch_logs], validation_split=0.1)
     seq_predictor.save_model(robot_model_name)
     # Uncomment plots if you want to visualize training metrics
     # plots(batch_logs)
@@ -46,14 +48,14 @@ def train_models(look_back, look_forth, output_dims, robot_model_name, ball_mode
     seq_predictor = BallRobotPredictor(look_back, look_back, look_forth, output_dims, use_tf_function=True, forcing=False)
     seq_predictor.compile(optimizer=tf.optimizers.Adam(learning_rate=lr_schedule), loss=SequenceLoss(), run_eagerly=False)
     batch_logs = BatchLogs()
-    seq_predictor.fit([robot_x, ball_x, ball_mask], y, epochs=10, batch_size=1024, callbacks=[batch_logs], validation_split=0.1)
+    seq_predictor.fit([robot_x, ball_x, ball_mask], y, epochs=1, batch_size=512, callbacks=[batch_logs], validation_split=0.1)
     seq_predictor.save_model(ball_model_name)
     # Uncomment plots if you want to visualize training metrics
     # plots(batch_logs)
 
 
 train_models(30, 15, 2, 'robot_30_15_t', 'ball_30_15_t')
-train_models(60, 30, 2, 'robot_30_60_t', 'ball_30_60_t')
+train_models(60, 30, 2, 'robot_60_30_t', 'ball_60_30_t')
 
 print('--- Training MLP model 15 -> 30')
 mlp_comparison_model = MLPComparison(30, 15, 2)

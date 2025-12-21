@@ -185,15 +185,21 @@ class LoadDataSet:
     def process_points(self, robot_pair, data_x, data_y, ball_x, ball_data, stop_id, time_c, mask, y_dim):
         for i in range(len(robot_pair) - self.look_back - self.look_forth):
             time_id = time_c[min(i+self.look_back, len(time_c))]
-            ball_sorted_data, ball_mask = self.get_ball_data(ball_data, stop_id, time_id)
-            ball_sorted_data = (ball_sorted_data - self.ball_avg) / self.ball_std
+
+            ball_data_unnorm, ball_mask = self.get_ball_data(ball_data, stop_id, time_id)
+
+            ball_pos_only = ball_data_unnorm[:, 0:2]
+
+            ball_pos_norm = (ball_pos_only - self.ball_avg[0:2]) / self.ball_std[0:2]
+
             x_set = (robot_pair[i:(i + self.look_back), 0:5] - self.robots_avg[0:5]) / self.robots_std[0:5]
             y_set = (robot_pair[(i+self.look_back - 1):(i + self.look_back + self.look_forth-1), y_dim:4]
                      - self.robots_avg[y_dim:4])/self.robots_std[y_dim:4]
+
             data_x.append(x_set)
             data_y.append(y_set)
-            ball_x.append(ball_sorted_data)
-            mask.append(ball_mask)
+            ball_x.append(ball_pos_norm) 
+            mask.append(ball_mask) 
 
     def prepare_single_trajectory_for_test(self, robot_data, ball_data, index):
         data_x, data_y, ball_x, ball_mask = [], [], [], []
@@ -227,3 +233,23 @@ class LoadDataSet:
             y_local[:, i] = y_local[:, i-1] + y_local[:, i]
 
         return y_local
+
+    def save_params(self, path):
+        params = {
+            'ball_avg': self.ball_avg,
+            'ball_std': self.ball_std,
+            'robots_avg': self.robots_avg,
+            'robots_std': self.robots_std
+        }
+        with open(path + '.pkl', 'wb') as f:
+            pickle.dump(params, f)
+        print(f"Parâmetros de normalização salvos em {path}.pkl")
+
+    def load_params(self, path):
+        with open(path + '.pkl', 'rb') as f:
+            params = pickle.load(f)
+        self.ball_avg = params['ball_avg']
+        self.ball_std = params['ball_std']
+        self.robots_avg = params['robots_avg']
+        self.robots_std = params['robots_std']
+        print(f"Parâmetros de normalização carregados de {path}.pkl")
