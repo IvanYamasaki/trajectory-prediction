@@ -4,6 +4,7 @@ import numpy as np
 from pykalman import KalmanFilter
 from dataset.kalman_smoother import KalmanSmoother
 from ai_model.losses import TestLoss, SequenceLoss
+from scipy.stats import ks_2samp
 import tensorflow as tf
 from dataset.load_dataset import LoadDataSet
 import matplotlib.pyplot as plt
@@ -15,23 +16,32 @@ class KalmanFilterComparison:
         self.look_back = look_back
         self.look_forth = look_forth
 
-        robots_f = open(data_file + '.pkl', 'rb')
-        self.robots_t = pickle.load(robots_f)
+        with open(data_file + '.pkl', 'rb') as f:
+            self.robots_t = pickle.load(f)
 
-        filter_params_f = open(params_file + '.pkl', 'rb')
-        params = pickle.load(filter_params_f)
-        self.transition_matrix = params.A
-        self.observation_matrix = params.C
+        with open(params_file + '.pkl', 'rb') as f:
+            params = pickle.load(f)
 
-        self.observation_covariance = np.linalg.inv(np.matmul(params.V_neg_sqrt, params.V_neg_sqrt))
-        self.transition_covariance = np.linalg.inv(np.matmul(params.W_neg_sqrt, params.W_neg_sqrt))
+        if hasattr(params, 'C'):
+            self.transition_matrix = params.A
+            self.observation_matrix = params.C
+            self.observation_noise = np.linalg.inv(np.matmul(params.V_neg_sqrt, params.V_neg_sqrt))
+            self.process_noise = np.linalg.inv(np.matmul(params.W_neg_sqrt, params.W_neg_sqrt))
+        elif isinstance(params, dict):
+            self.transition_matrix = params.get('A')
+            self.observation_matrix = params.get('H') or params.get('C')
+            self.process_noise = params.get('Q')
+            self.observation_noise = params.get('R')
+        else:
+            self.transition_matrix = getattr(params, 'A', None)
+            self.observation_matrix = getattr(params, 'C', getattr(params, 'H', None))
+            self.process_noise = getattr(params, 'Q', None)
+            self.observation_noise = getattr(params, 'R', None)
 
         self.smoother = KalmanSmoother()
         self.smoother.load_params(params_file)
         self.true = []
         self.predicted = []
-        robots_f.close()
-        filter_params_f.close()
 
     def get_future(self, a_matrix, last_pos):
         res = []
@@ -41,49 +51,84 @@ class KalmanFilterComparison:
             res.append([pos[0], pos[2]])
         return res
 
-    def process_robots(self, robots):
-        for k in range(0, len(robots)):
-            for robot_id, series in robots[k].items():
-                if len(series['x']) > 101:
-                    x_hat, _, _ = self.smoother.smooth(series['x'], series['y'], series['mask'])
-                    x_sm = x_hat[:, 0]
-                    y_sm = x_hat[:, 2]
-                    ism = [series['x'][0], 0, series['y'][0], 0]
-                    kf = KalmanFilter(transition_matrices=self.transition_matrix,
-                                      observation_matrices=self.observation_matrix,
-                                      initial_state_mean=ism,
-                                      observation_covariance=self.observation_covariance,
-                                      transition_covariance=self.transition_covariance)
-                    initial = np.array((series['x'][0:self.look_back], series['y'][0:self.look_back])).T
-                    means, cov = kf.filter(initial)
+    def process_robots(self, robots_dict):
+        for robot_id, list_of_subtrajs in robots_dict.items():
+            for series in list_of_subtrajs:
+                series = np.array(series)
+                if len(series) < (self.look_back + self.look_forth):
+                    continue
 
-                    self.true.append(np.array((x_sm[self.look_back:(self.look_back + self.look_forth)],
-                                               y_sm[self.look_back:(self.look_back + self.look_forth)])).T)
-                    self.predicted.append(np.array(self.get_future(kf.transition_matrices, means[-1])))
+                for i in range(len(series) - self.look_back - self.look_forth + 1):
+                    obs_window = series[i : i + self.look_back]
+                    target_window = series[i + self.look_back : i + self.look_back + self.look_forth]
 
-                    means, cov = means[-1], cov[-1]
+                    # SUBSTITUIÇÃO: Usamos a predição manual com as matrizes A e C
+                    prediction = self.predict_kalman(obs_window, self.look_forth)
 
-                    for i in range(self.look_back + 1, len(series['x']) - self.look_forth - 1):
-                        self.true.append(np.array((x_sm[(i + 1):(i + 1 + self.look_forth)],
-                                                   y_sm[(i + 1):(i + 1 + self.look_forth)])).T)
+                    self.true.append(target_window)
+                    self.predicted.append(prediction)
 
-                        means, cov = kf.filter_update(means, cov,
-                                                      np.array((series['x'][i], series['y'][i])))
-                        self.predicted.append(np.array(self.get_future(kf.transition_matrices, means)))
-                    break
-
+    def predict_kalman(self, obs_window, horizon):
+        """
+        Realiza a predição linear usando as matrizes de Espaço de Estados.
+        """
+        # 1. Estimativa do estado inicial [x, y, vx, vy] a partir do final da observação
+        p_t = obs_window[-1]
+        p_t_1 = obs_window[-2]
+        v_t = p_t - p_t_1
+        
+        # Estado: [pos_x, pos_y, vel_x, vel_y]
+        state = np.array([p_t[0], p_t[1], v_t[0], v_t[1]])
+        
+        preds = []
+        curr_state = state
+        
+        for _ in range(horizon):
+            # Equação de Transição: x(k+1) = A * x(k)
+            curr_state = np.matmul(self.transition_matrix, curr_state)
+            
+            # Equação de Medição: y(k) = C * x(k)
+            # Extraímos a posição (x, y) projetada
+            obs = np.matmul(self.observation_matrix, curr_state)
+            preds.append(obs[:2]) # Garante que retornamos apenas as coordenadas (x, y)
+            
+        return np.array(preds)
     def perform_test(self):
-        self.process_robots(self.robots_t['blue'])
-        self.process_robots(self.robots_t['yellow'])
+        # Itera sobre os times no dicionário limpo
+        if 'blue' in self.robots_t:
+            self.process_robots(self.robots_t['blue'])
+        if 'yellow' in self.robots_t:
+            self.process_robots(self.robots_t['yellow'])
+            
+        self.true = np.array(self.true)
+        self.predicted = np.array(self.predicted)
 
-        true = np.array(self.true)
-        predicted = np.array(self.predicted)
-        loss = TestLoss()
-        loss(true, predicted)
-        print("----Kalman filter results----")
-        print(f'Look back: {self.look_back} | Look forth: {self.look_forth}')
-        loss.print_error()
+        if self.true.size == 0:
+            print("Pulo: Sem dados suficientes para o teste de Kalman.")
+            return
 
+        test_loss = TestLoss()
+        test_loss(self.true, self.predicted)
+        test_loss.print_error()
+
+    def calculate_velocity_distribution(self, trajectories):
+        """
+        Calcula velocidades a partir das trajetórias (x, y)
+        trajectories: shape (amostras, frames, features)
+        """
+        # Calcula a diferença entre frames (dx, dy)
+        # Assumindo que x e y são as primeiras features
+        diff = np.diff(trajectories[:, :, :2], axis=1)
+        
+        # Velocidade escalar por frame: sqrt(dx^2 + dy^2)
+        velocities = np.sqrt(np.sum(diff**2, axis=-1)).flatten()
+        
+        return {
+            'mean': np.mean(velocities),
+            'std': np.std(velocities),
+            'max': np.max(velocities),
+            'raw': velocities # Para o teste estatístico
+        }    
 
 class MLPBatchLogs(tf.keras.callbacks.Callback):
     def __init__(self):
@@ -126,21 +171,26 @@ class MLPComparison:
         batch_logs = MLPBatchLogs()
 
         self.model.compile(optimizer=tf.optimizers.Adam(), loss=SequenceLoss(), run_eagerly=False)
-        self.model.fit(robot_x, y, epochs=1, batch_size=1024, callbacks=[batch_logs], validation_split=0.1)
+        self.model.fit(robot_x, y, epochs=10, batch_size=512, callbacks=[batch_logs], validation_split=0.1)
 
         # Uncomment this to visualize training metrics
-        # plt.figure()
-        # plt.plot(batch_logs.batch_logs)
-        # plt.title('Batch loss during training')
-        # plt.plot(batch_logs.val_logs)
-        # plt.title('Batch loss during validation')
+        plt.figure()
+        plt.plot(batch_logs.batch_logs)
+        plt.title('Batch loss during training')
+        plt.plot(batch_logs.val_logs)
+        plt.title('Batch loss during validation')
         self.model.compile(optimizer=tf.optimizers.Adam(), loss=tf.losses.MeanSquaredError())
         self.model.save(model_name + '.h5')
 
     def test_model(self, file_path: list, model_name):
         if self.model is None:
             self.model = tf.keras.models.load_model(model_name + '.h5')
+            
         robot_x, _, _, y = self.loader.load_data(file_path, for_test=True)
+
+        if robot_x is None or robot_x.size == 0:
+            print(f"Pulo: Amostras insuficientes para o horizonte {self.look_back}->{self.look_forth}")
+            return
 
         response = self.model.predict(robot_x)
         y_pred_conv = self.loader.convert_batch(robot_x, response)

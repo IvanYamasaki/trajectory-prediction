@@ -42,6 +42,8 @@ class Smoother:
     def process_ball_data(self, ball, stop_id, response):
         for k in range(len(ball)):
             cur = ball[k]
+            if len(cur['x']) < 2:
+                continue
             xhat, _, _ = self.ball_smoother.smooth(cur['x'], cur['y'], cur['mask'])
             response[stop_id[k]] = {
                 'x': xhat[:, 0],

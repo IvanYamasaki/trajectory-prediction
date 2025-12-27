@@ -11,7 +11,7 @@ from comparison_tests import MLPComparison
 
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-files = ['dataset/proc_set_1', 'dataset/proc_set_2']
+files = ['dataset/clean_proc_set_1', 'dataset/clean_proc_set_2']
 
 def plots(logs):
     plt.figure()
@@ -39,7 +39,7 @@ def train_models(look_back, look_forth, output_dims, robot_model_name, ball_mode
     seq_predictor = RobotOnlyPredictor(look_back, look_back, look_forth, output_dims, use_tf_function=True, forcing=False)
     seq_predictor.compile(optimizer=tf.optimizers.Adam(learning_rate=lr_schedule), loss=SequenceLoss(), run_eagerly=False)
     batch_logs = BatchLogs()
-    seq_predictor.fit(robot_x, y, epochs=1, batch_size=512, callbacks=[batch_logs], validation_split=0.1)
+    seq_predictor.fit(robot_x, y, epochs=10, batch_size=512, callbacks=[batch_logs], validation_split=0.1)
     seq_predictor.save_model(robot_model_name)
     # Uncomment plots if you want to visualize training metrics
     # plots(batch_logs)
@@ -48,7 +48,7 @@ def train_models(look_back, look_forth, output_dims, robot_model_name, ball_mode
     seq_predictor = BallRobotPredictor(look_back, look_back, look_forth, output_dims, use_tf_function=True, forcing=False)
     seq_predictor.compile(optimizer=tf.optimizers.Adam(learning_rate=lr_schedule), loss=SequenceLoss(), run_eagerly=False)
     batch_logs = BatchLogs()
-    seq_predictor.fit([robot_x, ball_x, ball_mask], y, epochs=1, batch_size=512, callbacks=[batch_logs], validation_split=0.1)
+    seq_predictor.fit([robot_x, ball_x, ball_mask], y, epochs=10, batch_size=512, callbacks=[batch_logs], validation_split=0.1)
     seq_predictor.save_model(ball_model_name)
     # Uncomment plots if you want to visualize training metrics
     # plots(batch_logs)

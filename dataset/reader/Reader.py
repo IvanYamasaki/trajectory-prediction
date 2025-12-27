@@ -1,6 +1,7 @@
 from .gen import messages_robocup_ssl_wrapper_pb2 as SSL_Wrapper
 from .gen import ssl_referee_pb2 as SSL_referee
 from .MessageType import MessageType
+from google.protobuf import message
 
 class Reader:
 

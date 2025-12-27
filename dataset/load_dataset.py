@@ -1,9 +1,9 @@
+import os
 import bisect
 import pickle
 import numpy as np
 import itertools
 from sklearn.utils import shuffle
-
 
 def load_data(file_path):
     f = open(file_path + '.pkl', 'rb')
@@ -136,41 +136,112 @@ class LoadDataSet:
         return np.stack([x, y, v_x, v_y, psi]).T
 
     '''
-    Receives a list of .pkl files to load
+    Receives a list of .pkl files to load (Clean format)
     '''
     def load_data(self, data_sets: list, for_test=False):
-        robot_data = []
-        ball_data = []
+        import pickle
+        
+        all_data_x, all_ball_x, all_ball_mask, all_data_y = [], [], [], []
+
         for elem in data_sets:
-            blue, yellow, ball = load_data(elem)
-            new_data = merge_teams(blue, yellow)
-            robot_data.append(new_data)
-            ball_data.append(ball)
+            target = elem + ".pkl" if not elem.endswith(".pkl") else elem
+            if not os.path.exists(target):
+                print(f"Arquivo não encontrado: {target}")
+                continue
+                
+            with open(target, 'rb') as f:
+                raw_data = pickle.load(f)
 
-        if self.ball_avg is None:
-            self.ball_avg, self.ball_std = get_avg_std_for_ball(ball_data)
-            self.robots_avg, self.robots_std = get_avg_std_for_robots(robot_data)
+            robot_trajectories = []
+            for team in ['yellow', 'blue']:
+                if team in raw_data:
+                    for robot_id, subtrajs in raw_data[team].items():
+                        for t in subtrajs:
+                            if t is None or len(t) < 2:
+                                continue
+                            if len(t) >= (self.look_back + self.look_forth):
+                                traj_np = np.array(t)
+                                diffs = np.diff(traj_np, axis=0)
+                                psi = np.arctan2(diffs[:, 1], diffs[:, 0]).reshape(-1, 1)
+                                vel_psi = np.hstack([diffs, psi])
+                                vel_psi = np.vstack([vel_psi[0], vel_psi]) 
+                                full_traj = np.hstack([traj_np, vel_psi])
+                                robot_trajectories.append(full_traj)
 
-        data_x, ball_x, ball_mask, data_y = None, None, None, None
-        for i in range(0, len(robot_data)):
-            cur_x, cur_ball_x, cur_ball_mask, cur_y = self.create_dataset(robot_data[i], ball_data[i], for_test)
+            ball_trajectories = []
+            if 'ball' in raw_data:
+                for ball_id, subtrajs in raw_data['ball'].items():
+                    for t in subtrajs:
+                        # Para a bola, mantemos 4 colunas [x, y, vx, vy]
+                        traj_np = np.array(t)
+                        if len(traj_np) < 2: continue
+                        diffs = np.diff(traj_np, axis=0)
+                        diffs = np.vstack([diffs[0], diffs])
+                        ball_trajectories.append(np.hstack([traj_np, diffs]))
 
-            if data_x is None:
-                data_x = cur_x
-                ball_x = cur_ball_x
-                ball_mask = cur_ball_mask
-                data_y = cur_y
-            else:
-                data_x = np.concatenate([data_x, cur_x], axis=0)
-                ball_x = np.concatenate([ball_x, cur_ball_x], axis=0)
-                ball_mask = np.concatenate([ball_mask, cur_ball_mask], axis=0)
-                data_y = np.concatenate([data_y, cur_y], axis=0)
+            if self.ball_avg is None:
+                all_robot_pts = np.concatenate(robot_trajectories, axis=0) if robot_trajectories else np.array([])
+                all_ball_pts = np.concatenate(ball_trajectories, axis=0) if ball_trajectories else np.array([])
+                
+                if all_robot_pts.size > 0:
+                    self.robots_avg = np.mean(all_robot_pts, axis=0)
+                    self.robots_std = np.std(all_robot_pts, axis=0)
+                    # Evita divisão por zero
+                    self.robots_std[self.robots_std == 0] = 1.0
+                if all_ball_pts.size > 0:
+                    self.ball_avg = np.mean(all_ball_pts, axis=0)
+                    self.ball_std = np.std(all_ball_pts, axis=0)
+                    self.ball_std[self.ball_std == 0] = 1.0
+
+            for traj in robot_trajectories:
+                cur_x, cur_ball_x, cur_ball_mask, cur_y = self.process_single_trajectory(traj, ball_trajectories, for_test)
+                
+                if cur_x is not None and len(cur_x) > 0:
+                    all_data_x.append(cur_x)
+                    all_ball_x.append(cur_ball_x)
+                    all_ball_mask.append(cur_ball_mask)
+                    all_data_y.append(cur_y)
+
+        if not all_data_x:
+            print(f"Aviso: Sem dados para o horizonte {self.look_back}+{self.look_forth}")
+            empty = np.array([])
+            return empty, empty, empty, empty
+
+        data_x = np.concatenate(all_data_x, axis=0)
+        ball_x = np.concatenate(all_ball_x, axis=0)
+        ball_mask = np.concatenate(all_ball_mask, axis=0)
+        data_y = np.concatenate(all_data_y, axis=0)
 
         if for_test:
             return data_x, ball_x, ball_mask, data_y
         else:
+            from sklearn.utils import shuffle
             return shuffle(data_x, ball_x, ball_mask, data_y, random_state=0)
 
+    def process_single_trajectory(self, traj, ball_trajectories=None, for_test=False):
+        # traj já chega com 5 colunas aqui
+        windows_x, windows_y = [], []
+        windows_ball_x, windows_ball_mask = [], []
+
+        num_windows = len(traj) - self.look_back - self.look_forth + 1
+        if num_windows <= 0:
+            return None, None, None, None
+
+        for i in range(num_windows):
+            window_x = traj[i : i + self.look_back].copy()
+            window_y = traj[i + self.look_back : i + self.look_back + self.look_forth, :2].copy()
+
+            window_x = (window_x - self.robots_avg) / self.robots_std
+            window_y = (window_y - self.robots_avg[:2]) / self.robots_std[:2]
+
+            windows_x.append(window_x)
+            windows_y.append(window_y)
+            
+            windows_ball_x.append(np.zeros((self.look_back, 4))) 
+            windows_ball_mask.append(np.zeros((self.look_back,)))
+
+        return np.array(windows_x), np.array(windows_ball_x), np.array(windows_ball_mask), np.array(windows_y)
+    
     def create_dataset(self, robot_data, ball_data, for_test=False):
         data_x, data_y, ball_x, ball_mask = [], [], [], []
         y_dim = 0 if for_test else 2
@@ -210,9 +281,13 @@ class LoadDataSet:
         return np.array(data_x), np.array(data_y), np.array(ball_mask, dtype=np.bool), np.array(data_y)
 
     def convert_to_real(self, robot_data):
-        for i in range(np.shape(robot_data)[0]):
-            robot_data[i] = robot_data[i] * self.robots_std[0:4] + self.robots_avg[0:4]
-
+        if isinstance(robot_data, np.ndarray):
+            return robot_data * self.robots_std[0:2] + self.robots_avg[0:2]
+        
+        for i in range(len(robot_data)):
+            robot_data[i] = robot_data[i] * self.robots_std[0:2] + self.robots_avg[0:2]
+        return robot_data
+    
     def convert_single(self, x, y):
         last_pos = x[self.look_back-1, 0:2]
         last_pos = last_pos*self.robots_std[0:2] + self.robots_avg[0:2]
