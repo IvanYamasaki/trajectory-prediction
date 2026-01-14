@@ -1,6 +1,6 @@
 import pickle
 import typing
-from . import auto_ks
+import auto_ks
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -71,7 +71,7 @@ class KalmanSmoother:
         plt.show()
 
     def save_params(self, file_name):
-        with open('dataset/' + file_name + '.pkl', 'wb') as f:
+        with open('' + file_name + '.pkl', 'wb') as f:
             pickle.dump(self.params, f)
 
     def load_params(self, file_name):

@@ -1,9 +1,9 @@
-import os
 import bisect
 import pickle
 import numpy as np
 import itertools
 from sklearn.utils import shuffle
+
 
 def load_data(file_path):
     f = open(file_path + '.pkl', 'rb')
@@ -11,7 +11,7 @@ def load_data(file_path):
     blue = robots['blue']
     yellow = robots['yellow']
     ball = robots['ball']
-
+    
     return blue, yellow, ball
 
 
@@ -32,25 +32,17 @@ def merge_teams(team_1, team_2):
 
 
 def get_avg_std_for_robots_merged(data):
-    flat_x_coord = np.array(list(itertools.chain(*data['position']['x'])))
-    flat_y_coord = np.array(list(itertools.chain(*data['position']['y'])))
-    flat_vx = np.array(list(itertools.chain(*data['speed']['x'])))
-    flat_vy = np.array(list(itertools.chain(*data['speed']['y'])))
+    # Extração de 6 features: x, y, vx, vy, sin, cos
+    f_x = np.array(list(itertools.chain(*data['position']['x'])))
+    f_y = np.array(list(itertools.chain(*data['position']['y'])))
+    f_vx = np.array(list(itertools.chain(*data['speed']['x'])))
+    f_vy = np.array(list(itertools.chain(*data['speed']['y'])))
+    f_psi = np.array(list(itertools.chain(*data['psi'])))
+    
+    s_psi, c_psi = np.sin(f_psi), np.cos(f_psi)
+    feats = [f_x, f_y, f_vx, f_vy, s_psi, c_psi]
 
-    flat_psi = np.array(list(itertools.chain(*data['psi'])))
-
-    x_coord_avg, x_coord_std = np.mean(flat_x_coord), np.std(flat_x_coord)
-    vx_avg, vx_std = np.mean(flat_vx), np.std(flat_vx)
-    y_coord_avg, y_coord_std = np.mean(flat_y_coord), np.std(flat_y_coord)
-    vy_avg, vy_std = np.mean(flat_vy), np.std(flat_vy)
-
-    psi_avg, psi_std = np.mean(flat_psi), np.std(flat_psi)
-
-    avg = np.asarray((x_coord_avg, y_coord_avg, vx_avg, vy_avg, psi_avg))
-    std = np.asarray((x_coord_std, y_coord_std, vx_std, vy_std, psi_std))
-
-    return avg, std
-
+    return np.array([np.mean(f) for f in feats]), np.array([np.std(f) for f in feats])
 
 def get_avg_std_for_robots(robots_data):
     merged_data = None
@@ -99,9 +91,10 @@ class LoadDataSet:
     robots_avg = None
     robots_std = None
 
-    def __init__(self, look_back, look_forth):
+    def __init__(self, look_back, look_forth, target="v"):
         self.look_back = look_back
         self.look_forth = look_forth
+        self.target = target 
 
     def get_ball_data(self, ball, stop_id, time_c):
         local = ball[stop_id]
@@ -123,208 +116,115 @@ class LoadDataSet:
             speed_y = np.concatenate([np.array([local['v_y'][0]]*diff), speed_y], axis=0)
             mask[0:diff] = [False]*diff
 
-        return np.stack([pos_x, pos_y, speed_x, speed_y]).T, np.array(mask, dtype=bool)
+        return np.stack([pos_x, pos_y, speed_x, speed_y]).T, np.array(mask, dtype=np.bool)
 
     @staticmethod
     def get_robot_data(data, index):
-        x = data['position']['x'][index]
-        y = data['position']['y'][index]
-        v_x = data['speed']['x'][index]
-        v_y = data['speed']['y'][index]
         psi = data['psi'][index]
+        # Retorna 6 colunas
+        return np.stack([
+            data['position']['x'][index], data['position']['y'][index],
+            data['speed']['x'][index], data['speed']['y'][index],
+            np.sin(psi), np.cos(psi)
+        ]).T
 
-        return np.stack([x, y, v_x, v_y, psi]).T
 
     '''
-    Receives a list of .pkl files to load (Clean format)
+    Receives a list of .pkl files to load
     '''
     def load_data(self, data_sets: list, for_test=False):
-        import pickle
-        
-        all_data_x, all_ball_x, all_ball_mask, all_data_y = [], [], [], []
-
+        robot_data, ball_data = [], []
         for elem in data_sets:
-            target = elem + ".pkl" if not elem.endswith(".pkl") else elem
-            if not os.path.exists(target):
-                print(f"Arquivo não encontrado: {target}")
-                continue
-                
-            with open(target, 'rb') as f:
-                raw_data = pickle.load(f)
+            blue, yellow, ball = load_data(elem)
+            robot_data.append(merge_teams(blue, yellow))
+            ball_data.append(ball)
 
-            robot_trajectories = []
-            for team in ['yellow', 'blue']:
-                if team in raw_data:
-                    for robot_id, subtrajs in raw_data[team].items():
-                        for t in subtrajs:
-                            if t is None or len(t) < 2:
-                                continue
-                            if len(t) >= (self.look_back + self.look_forth):
-                                traj_np = np.array(t)
-                                diffs = np.diff(traj_np, axis=0)
-                                psi = np.arctan2(diffs[:, 1], diffs[:, 0]).reshape(-1, 1)
-                                vel_psi = np.hstack([diffs, psi])
-                                vel_psi = np.vstack([vel_psi[0], vel_psi]) 
-                                full_traj = np.hstack([traj_np, vel_psi])
-                                robot_trajectories.append(full_traj)
+        if self.ball_avg is None:
+            self.ball_avg, self.ball_std = get_avg_std_for_ball(ball_data)
+            self.robots_avg, self.robots_std = get_avg_std_for_robots(robot_data)
 
-            ball_trajectories = []
-            if 'ball' in raw_data:
-                for ball_id, subtrajs in raw_data['ball'].items():
-                    for t in subtrajs:
-                        # Para a bola, mantemos 4 colunas [x, y, vx, vy]
-                        traj_np = np.array(t)
-                        if len(traj_np) < 2: continue
-                        diffs = np.diff(traj_np, axis=0)
-                        diffs = np.vstack([diffs[0], diffs])
-                        ball_trajectories.append(np.hstack([traj_np, diffs]))
+        data_x, ball_x, ball_mask, data_y = None, None, None, None
+        for i in range(len(robot_data)):
+            cur_x, cur_ball_x, cur_ball_mask, cur_y = self.create_dataset(robot_data[i], ball_data[i], for_test)
+            if data_x is None:
+                data_x, ball_x, ball_mask, data_y = cur_x, cur_ball_x, cur_ball_mask, cur_y
+            else:
+                data_x = np.concatenate([data_x, cur_x], axis=0)
+                ball_x = np.concatenate([ball_x, cur_ball_x], axis=0)
+                ball_mask = np.concatenate([ball_mask, cur_ball_mask], axis=0)
+                data_y = np.concatenate([data_y, cur_y], axis=0)
 
-            if self.ball_avg is None:
-                all_robot_pts = np.concatenate(robot_trajectories, axis=0) if robot_trajectories else np.array([])
-                all_ball_pts = np.concatenate(ball_trajectories, axis=0) if ball_trajectories else np.array([])
-                
-                if all_robot_pts.size > 0:
-                    self.robots_avg = np.mean(all_robot_pts, axis=0)
-                    self.robots_std = np.std(all_robot_pts, axis=0)
-                    # Evita divisão por zero
-                    self.robots_std[self.robots_std == 0] = 1.0
-                if all_ball_pts.size > 0:
-                    self.ball_avg = np.mean(all_ball_pts, axis=0)
-                    self.ball_std = np.std(all_ball_pts, axis=0)
-                    self.ball_std[self.ball_std == 0] = 1.0
-
-            for traj in robot_trajectories:
-                cur_x, cur_ball_x, cur_ball_mask, cur_y = self.process_single_trajectory(traj, ball_trajectories, for_test)
-                
-                if cur_x is not None and len(cur_x) > 0:
-                    all_data_x.append(cur_x)
-                    all_ball_x.append(cur_ball_x)
-                    all_ball_mask.append(cur_ball_mask)
-                    all_data_y.append(cur_y)
-
-        if not all_data_x:
-            print(f"Aviso: Sem dados para o horizonte {self.look_back}+{self.look_forth}")
-            empty = np.array([])
-            return empty, empty, empty, empty
-
-        data_x = np.concatenate(all_data_x, axis=0)
-        ball_x = np.concatenate(all_ball_x, axis=0)
-        ball_mask = np.concatenate(all_ball_mask, axis=0)
-        data_y = np.concatenate(all_data_y, axis=0)
+        data_x = np.array(data_x, dtype=np.float32)
+        data_y = np.array(data_y, dtype=np.float32)
+        ball_x = np.array(ball_x, dtype=np.float32)
+        ball_mask = np.array(ball_mask, dtype=np.bool_)
 
         if for_test:
             return data_x, ball_x, ball_mask, data_y
-        else:
-            from sklearn.utils import shuffle
-            return shuffle(data_x, ball_x, ball_mask, data_y, random_state=0)
+        return shuffle(data_x, ball_x, ball_mask, data_y, random_state=0)
 
-    def process_single_trajectory(self, traj, ball_trajectories=None, for_test=False):
-        # traj já chega com 5 colunas aqui
-        windows_x, windows_y = [], []
-        windows_ball_x, windows_ball_mask = [], []
 
-        num_windows = len(traj) - self.look_back - self.look_forth + 1
-        if num_windows <= 0:
-            return None, None, None, None
-
-        for i in range(num_windows):
-            window_x = traj[i : i + self.look_back].copy()
-            window_y = traj[i + self.look_back : i + self.look_back + self.look_forth, :2].copy()
-
-            window_x = (window_x - self.robots_avg) / self.robots_std
-            window_y = (window_y - self.robots_avg[:2]) / self.robots_std[:2]
-
-            windows_x.append(window_x)
-            windows_y.append(window_y)
-            
-            windows_ball_x.append(np.zeros((self.look_back, 4))) 
-            windows_ball_mask.append(np.zeros((self.look_back,)))
-
-        return np.array(windows_x), np.array(windows_ball_x), np.array(windows_ball_mask), np.array(windows_y)
-    
     def create_dataset(self, robot_data, ball_data, for_test=False):
         data_x, data_y, ball_x, ball_mask = [], [], [], []
-        y_dim = 0 if for_test else 2
+        # O modelo Seq2Seq SEMPRE deve prever deslocamentos (2 colunas: vx, vy)
+        y_dim = 2 
         for k in range(len(robot_data['position']['x'])):
             time_c = robot_data['time_c'][k]
             stop_id = robot_data['stop_id'][k]
             robot_pair = LoadDataSet.get_robot_data(robot_data, k)
             self.process_points(robot_pair, data_x, data_y, ball_x, ball_data, stop_id, time_c, ball_mask, y_dim)
 
-        return np.array(data_x), np.array(ball_x), np.array(ball_mask, dtype=bool), np.array(data_y)
-
+        return np.array(data_x), np.array(ball_x), np.array(ball_mask, dtype=np.bool), np.array(data_y)
+    
     def process_points(self, robot_pair, data_x, data_y, ball_x, ball_data, stop_id, time_c, mask, y_dim):
         for i in range(len(robot_pair) - self.look_back - self.look_forth):
-            time_id = time_c[min(i+self.look_back, len(time_c))]
+            future_v = robot_pair[(i + self.look_back):(i + self.look_back + self.look_forth), 2:4]
+            if np.mean(np.linalg.norm(future_v, axis=1)) < 5.0:
+                continue
 
-            ball_data_unnorm, ball_mask = self.get_ball_data(ball_data, stop_id, time_id)
+            x_set = (robot_pair[i:(i + self.look_back), 0:6] - self.robots_avg[:6]) / self.robots_std[:6]
 
-            ball_pos_only = ball_data_unnorm[:, 0:2]
+            if self.target == "dv":
+                v0 = robot_pair[i + self.look_back - 1, 2:4]
+                dv = np.empty_like(future_v)
+                dv[0] = future_v[0] - v0
+                dv[1:] = future_v[1:] - future_v[:-1]
+                y_set = dv / self.robots_std[2:4]
+            else:
+                y_set = (future_v - self.robots_avg[2:4]) / self.robots_std[2:4]
 
-            ball_pos_norm = (ball_pos_only - self.ball_avg[0:2]) / self.ball_std[0:2]
-
-            x_set = (robot_pair[i:(i + self.look_back), 0:5] - self.robots_avg[0:5]) / self.robots_std[0:5]
-            y_set = (robot_pair[(i+self.look_back - 1):(i + self.look_back + self.look_forth-1), y_dim:4]
-                     - self.robots_avg[y_dim:4])/self.robots_std[y_dim:4]
-
+            b_data, b_mask = self.get_ball_data(ball_data, stop_id, time_c[min(i + self.look_back, len(time_c) - 1)])
             data_x.append(x_set)
             data_y.append(y_set)
-            ball_x.append(ball_pos_norm) 
-            mask.append(ball_mask) 
+            ball_x.append((b_data - self.ball_avg) / self.ball_std)
+            mask.append(b_mask)
 
     def prepare_single_trajectory_for_test(self, robot_data, ball_data, index):
         data_x, data_y, ball_x, ball_mask = [], [], [], []
         time_c = robot_data['time_c'][index]
         stop_id = robot_data['stop_id'][index]
         robot_pair = LoadDataSet.get_robot_data(robot_data, index)
-        self.process_points(robot_pair, data_x, data_y, ball_x, ball_data, stop_id, time_c, ball_mask, 0)
-        return np.array(data_x), np.array(data_y), np.array(ball_mask, dtype=np.bool), np.array(data_y)
-
-    def convert_to_real(self, robot_data):
-        if isinstance(robot_data, np.ndarray):
-            return robot_data * self.robots_std[0:2] + self.robots_avg[0:2]
-        
-        for i in range(len(robot_data)):
-            robot_data[i] = robot_data[i] * self.robots_std[0:2] + self.robots_avg[0:2]
-        return robot_data
+        # Usa y_dim=2 para manter consistência com o modelo treinado
+        self.process_points(robot_pair, data_x, data_y, ball_x, ball_data, stop_id, time_c, ball_mask, 2)
+        return np.array(data_x), np.array(ball_x), np.array(ball_mask, dtype=np.bool), np.array(data_y)
     
-    def convert_single(self, x, y):
-        last_pos = x[self.look_back-1, 0:2]
-        last_pos = last_pos*self.robots_std[0:2] + self.robots_avg[0:2]
-        y_local = y*self.robots_std[2:4] + self.robots_avg[2:4]
-        y_local[0] = y_local[0] + last_pos
-        for i in range(1, self.look_forth):
-            y_local[i] = y_local[i-1] + y_local[i]
+    def convert_to_real(self, robot_data):
+        for i in range(np.shape(robot_data)[0]):
+            robot_data[i] = robot_data[i] * self.robots_std[0:4] + self.robots_avg[0:4]
 
-        return y_local
+    def convert_single(self, x, y):
+        last_pos = x[self.look_back - 1, 0:2] * self.robots_std[0:2] + self.robots_avg[0:2]
+        v0 = x[self.look_back - 1, 2:4] * self.robots_std[2:4] + self.robots_avg[2:4]
+
+        if self.target == "dv":
+            dv = y * self.robots_std[2:4]
+            v = v0 + np.cumsum(dv, axis=0)
+        else:
+            v = y * self.robots_std[2:4] + self.robots_avg[2:4]
+
+        return last_pos + np.cumsum(v, axis=0)
 
     def convert_batch(self, x, y):
-        last_pos = x[:, self.look_back-1, 0:2]
-        last_pos = last_pos*self.robots_std[0:2] + self.robots_avg[0:2]
-        y_local = y*self.robots_std[2:4] + self.robots_avg[2:4]
-        y_local[:, 0] = y_local[:, 0] + last_pos
-
-        for i in range(1, self.look_forth):
-            y_local[:, i] = y_local[:, i-1] + y_local[:, i]
-
-        return y_local
-
-    def save_params(self, path):
-        params = {
-            'ball_avg': self.ball_avg,
-            'ball_std': self.ball_std,
-            'robots_avg': self.robots_avg,
-            'robots_std': self.robots_std
-        }
-        with open(path + '.pkl', 'wb') as f:
-            pickle.dump(params, f)
-        print(f"Parâmetros de normalização salvos em {path}.pkl")
-
-    def load_params(self, path):
-        with open(path + '.pkl', 'rb') as f:
-            params = pickle.load(f)
-        self.ball_avg = params['ball_avg']
-        self.ball_std = params['ball_std']
-        self.robots_avg = params['robots_avg']
-        self.robots_std = params['robots_std']
-        print(f"Parâmetros de normalização carregados de {path}.pkl")
+        last_pos = x[:, self.look_back - 1, 0:2] * self.robots_std[0:2] + self.robots_avg[0:2]
+        v = y * self.robots_std[2:4] + self.robots_avg[2:4]
+        return last_pos[:, None, :] + np.cumsum(v, axis=1)

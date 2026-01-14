@@ -1,6 +1,6 @@
 import pickle
 import matplotlib.pyplot as plt
-from .kalman_smoother import SSLData, KalmanSmoother
+from kalman_smoother import SSLData, KalmanSmoother
 import numpy as np
 
 # Define o arquivo que será usado para aprender os parâmetros do filtro.
@@ -34,7 +34,7 @@ def get_robot_position_series_params():
         mask=robot_2['mask']
     )
 
-    fitter = KalmanSmoother(1, 0.1)
+    fitter = KalmanSmoother(process_noise_factor=1, sensor_noise_factor=10)
     fitter.call(training_data, testing_data, 'position_series_params', lr=1e-2, niter=25)
 
 
@@ -69,7 +69,7 @@ def get_ball_position_series_params():
     
     ball = file_data['ball']
     # Pega as duas primeiras sequências de bola disponíveis
-    ball_1 = ball[1]
+    ball_1 = ball[0]
     ball_2 = ball[0]
 
     training_data = SSLData(

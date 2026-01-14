@@ -1,22 +1,23 @@
-# Logs e arquivos compactados originais
-*.log
-*.gz
+# env
+venv/
+venv-wsl/
 
-# Arquivos de bytecode e caches
+# artifacts
+*.weights.h5
+*.pkl
+plots/
+*.log
+
+# dataset heavy
+dataset/*.pkl
+dataset/*.log.gz
+
+# deb leftovers
+*.deb
+*.deb.*
+cuda-keyring*
+libtinfo*
+
+# misc
 __pycache__/
 *.pyc
-*.pyo
-
-# Ambientes virtuais
-/venv
-/env
-.vscode/
-
-# Arquivos de modelos e pesos (NOVOS)
-*.weights.h5
-*.h5
-
-# Arquivos de dados e processamento (NOVOS)
-*.pkl
-*.deb
-*.exe

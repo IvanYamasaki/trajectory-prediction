@@ -54,3 +54,19 @@ class TestLoss:
         else:
             for key, value in self.error.items():
                 print(f'{key}: {value}')
+
+class PositionMMMetrics:
+    def __init__(self, loader):
+        self.loader = loader
+
+    def metrics_mm(self, x_norm, y_true_norm, y_pred_norm):
+        pos_true = self.loader.convert_batch(x_norm, y_true_norm)
+        pos_pred = self.loader.convert_batch(x_norm, y_pred_norm)
+
+        diff = pos_pred - pos_true
+        dist = np.linalg.norm(diff, axis=-1)
+
+        ade = float(np.mean(dist))
+        fde = float(np.mean(dist[:, -1]))
+        mae = float(np.mean(np.abs(diff)))
+        return ade, fde, mae

@@ -1,8 +1,6 @@
 import pickle
-
-from .kalman_smoother import KalmanSmoother
 import numpy as np
-
+from kalman_smoother import KalmanSmoother # Removido o ponto aqui
 
 class Smoother:
     position_smoother = KalmanSmoother()
@@ -10,6 +8,7 @@ class Smoother:
     ball_smoother = KalmanSmoother()
 
     def __init__(self):
+        # Caminhos relativos à raiz do projeto
         self.position_smoother.load_params('dataset/position_series_params')
         self.psi_smoother.load_params('dataset/heading_series_params')
         self.ball_smoother.load_params('dataset/ball_positions_series_params')
@@ -17,7 +16,6 @@ class Smoother:
     def smooth_psi(self, psi, mask):
         psi_sin = np.sin(psi)
         psi_cos = np.cos(psi)
-
         xhat, _, _ = self.psi_smoother.smooth(psi_sin, psi_cos, mask)
         return np.arctan2(xhat[:, 0], xhat[:, 2])
 
@@ -28,28 +26,23 @@ class Smoother:
                     xhat, _, _ = self.position_smoother.smooth(data['x'], data['y'], data['mask'])
                     response['position']['x'].append(xhat[:, 0])
                     response['position']['y'].append(xhat[:, 2])
-
                     response['speed']['x'].append(xhat[:, 1])
                     response['speed']['y'].append(xhat[:, 3])
-
                     new_psi = self.smooth_psi(np.array(data['psi']), data['mask'])
                     response['psi'].append(new_psi)
-
                     response['time_c'].append(data['time_c'])
                     response['stop_id'].append(stop_id[k])
-
 
     def process_ball_data(self, ball, stop_id, response):
         for k in range(len(ball)):
             cur = ball[k]
-            if len(cur['x']) < 2:
-                continue
+            if len(cur['x']) < 2: continue
             xhat, _, _ = self.ball_smoother.smooth(cur['x'], cur['y'], cur['mask'])
             response[stop_id[k]] = {
                 'x': xhat[:, 0],
                 'y': xhat[:, 2],
                 'v_x': xhat[:, 1],
-                'v_y': xhat[:, 2],
+                'v_y': xhat[:, 3], # Corrigido: vx=1, vy=3
                 'time_c': cur['time_c']
             }
 
@@ -58,18 +51,13 @@ class Smoother:
         robots_y = {'position': {'x': [], 'y': []}, 'speed': {'x': [], 'y': []}, 'psi': [], 'stop_id': [], 'time_c': []}
         ball = {}
 
-        file = open('dataset/' + source_file + '.pkl', 'rb')
-        data = pickle.load(file)
+        with open('dataset/' + source_file + '.pkl', 'rb') as f:
+            data = pickle.load(f)
+        
         self.process_robots_data(data['blue'], data['stop_id'], robots_b)
         self.process_robots_data(data['yellow'], data['stop_id'], robots_y)
         self.process_ball_data(data['ball'], data['stop_id'], ball)
 
-        all_data = {
-            'yellow': robots_y,
-            'blue': robots_b,
-            'ball': ball,
-        }
-
+        all_data = {'yellow': robots_y, 'blue': robots_b, 'ball': ball}
         with open('dataset/' + dest_file + '.pkl', 'wb') as f:
             pickle.dump(all_data, f)
-

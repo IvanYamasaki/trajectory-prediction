@@ -1,66 +1,117 @@
-import sys
 import os
-sys.path.append(os.path.abspath('dataset'))
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+os.environ["XLA_FLAGS"] = "--xla_gpu_cuda_data_dir=/usr/lib/cuda"
+import warnings
+warnings.filterwarnings("ignore")
+import absl.logging
+absl.logging.set_verbosity(absl.logging.ERROR)
+
+import os, pickle, numpy as np, tensorflow as tf
 from dataset.load_dataset import LoadDataSet
-from ai_model.predictor import RobotOnlyPredictor, BallRobotPredictor
-import tensorflow as tf
-from ai_model.losses import SequenceLoss
-from ai_model.batch_logs import BatchLogs
-import matplotlib.pyplot as plt
-from comparison_tests import MLPComparison
+from ai_model.predictor import RobotOnlyPredictor
+from ai_model.losses import PositionMMMetrics
+from tensorflow.keras import mixed_precision
+mixed_precision.set_global_policy("mixed_float16")
+tf.config.optimizer.set_jit(True)
+gpus = tf.config.list_physical_devices("GPU")
+if gpus:
+    for g in gpus:
+        tf.config.experimental.set_memory_growth(g, True)
+        
+FILES_TRAIN=["dataset/proc_set_1", "dataset/proc_set_2"]
+UNITS=128
+BATCH_SIZE=1024
+VAL_SPLIT=0.10
+SEED=7
 
+EPOCHS_30_15=30
+EPOCHS_60_30=30
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-files = ['dataset/clean_proc_set_1', 'dataset/clean_proc_set_2']
+SEQ_30_15="robot_30_15_t.weights.h5"
+SEQ_60_30="robot_60_30_t.weights.h5"
+MLP_30_15="mlp_30_15.weights.h5"
+MLP_60_30="mlp_60_30.weights.h5"
 
-def plots(logs):
-    plt.figure()
-    plt.plot(logs.batch_logs)
-    plt.title('Training batch loss')
-    plt.figure()
-    plt.plot(logs.val_logs)
-    plt.title('Validation loss')
-    plt.show()
+RESUME_IF_EXISTS=True
 
+def seed_all(seed=SEED):
+    os.environ["PYTHONHASHSEED"]=str(seed)
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
 
-def train_models(look_back, look_forth, output_dims, robot_model_name, ball_model_name):
-    loader = LoadDataSet(look_back, look_forth)
-    robot_x, ball_x, ball_mask, y = loader.load_data(files, for_test=False)
-    loader.save_params('dataset/norm_params')
-    
+def save_norm_stats(loader, path):
+    stats={"avg":loader.robots_avg,"std":loader.robots_std,"ball_avg":loader.ball_avg,"ball_std":loader.ball_std}
+    with open(path,"wb") as f: pickle.dump(stats,f)
 
-    lr = 0.001
-    lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
-        lr,
-        decay_steps=1000, decay_rate=0.98,
-    )
+def make_fixed_val_split(x, y, val_frac=VAL_SPLIT, seed=SEED):
+    n=len(x)
+    rng=np.random.RandomState(seed)
+    idx=rng.permutation(n)
+    n_val=max(1,int(n*val_frac))
+    val_idx=idx[:n_val]
+    tr_idx=idx[n_val:]
+    return x[tr_idx], y[tr_idx], x[val_idx], y[val_idx]
 
-    print(f'--- Training robot model {look_back} -> {look_forth}')
-    seq_predictor = RobotOnlyPredictor(look_back, look_back, look_forth, output_dims, use_tf_function=True, forcing=False)
-    seq_predictor.compile(optimizer=tf.optimizers.Adam(learning_rate=lr_schedule), loss=SequenceLoss(), run_eagerly=False)
-    batch_logs = BatchLogs()
-    seq_predictor.fit(robot_x, y, epochs=10, batch_size=512, callbacks=[batch_logs], validation_split=0.1)
-    seq_predictor.save_model(robot_model_name)
-    # Uncomment plots if you want to visualize training metrics
-    # plots(batch_logs)
+class EpochFDE(tf.keras.callbacks.Callback):
+    def __init__(self, loader_mm, x_tr_ref, y_tr_ref, x_val_ref, y_val_ref):
+        super().__init__()
+        self.mm = PositionMMMetrics(loader_mm)
+        self.x_tr_ref = x_tr_ref
+        self.y_tr_ref = y_tr_ref
+        self.x_val_ref = x_val_ref
+        self.y_val_ref = y_val_ref
 
-    print(f'--- Training ball model {look_back} -> {look_forth}')
-    seq_predictor = BallRobotPredictor(look_back, look_back, look_forth, output_dims, use_tf_function=True, forcing=False)
-    seq_predictor.compile(optimizer=tf.optimizers.Adam(learning_rate=lr_schedule), loss=SequenceLoss(), run_eagerly=False)
-    batch_logs = BatchLogs()
-    seq_predictor.fit([robot_x, ball_x, ball_mask], y, epochs=10, batch_size=512, callbacks=[batch_logs], validation_split=0.1)
-    seq_predictor.save_model(ball_model_name)
-    # Uncomment plots if you want to visualize training metrics
-    # plots(batch_logs)
+    def on_epoch_end(self, epoch, logs=None):
+        logs = logs or {}
+        y_tr_pred = self.model.predict(self.x_tr_ref, verbose=0)
+        _, tr_fde, _ = self.mm.metrics_mm(self.x_tr_ref, self.y_tr_ref, y_tr_pred)
+        y_val_pred = self.model.predict(self.x_val_ref, verbose=0)
+        _, val_fde, _ = self.mm.metrics_mm(self.x_val_ref, self.y_val_ref, y_val_pred)
+        logs["train_FDE_mm"] = float(tr_fde)
+        logs["val_FDE_mm"] = float(val_fde)
 
+def train_seq2seq_block(look_back, look_forth, epochs, out_weights):
+    loader_dv = LoadDataSet(look_back, look_forth, target="dv")
+    x, _, _, y = loader_dv.load_data(FILES_TRAIN, for_test=False)
+    x = x.astype(np.float32); y = y.astype(np.float32)
 
-train_models(30, 15, 2, 'robot_30_15_t', 'ball_30_15_t')
-train_models(60, 30, 2, 'robot_60_30_t', 'ball_60_30_t')
+    loader_mm = LoadDataSet(look_back, look_forth, target="dv")
+    loader_mm.robots_avg, loader_mm.robots_std = loader_dv.robots_avg, loader_dv.robots_std
+    loader_mm.ball_avg, loader_mm.ball_std = loader_dv.ball_avg, loader_dv.ball_std
 
-print('--- Training MLP model 15 -> 30')
-mlp_comparison_model = MLPComparison(30, 15, 2)
-mlp_comparison_model.train_model(files, 'mlp_comp')
+    save_norm_stats(loader_dv, f"normalization_stats_{look_back}_{look_forth}.pkl")
 
-print('--- Training MLP model 30 -> 60')
-mlp_comparison_model = MLPComparison(60, 30, 2)
-mlp_comparison_model.train_model(files, 'mlp_comp_2')
+    x_tr, y_tr, x_val, y_val = make_fixed_val_split(x, y, VAL_SPLIT, SEED)
+
+    model = RobotOnlyPredictor(units=UNITS, look_back=look_back, look_forth=look_forth, result_dims=2, use_tf_function=False, forcing=False)
+    model.forcing = False
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3, clipnorm=1.0), loss=tf.keras.losses.MeanSquaredError(), run_eagerly=False)
+
+    _ = model(tf.zeros((1, look_back, 6), tf.float32), training=False)
+    if RESUME_IF_EXISTS and os.path.exists(out_weights):
+        model.load_weights(out_weights)
+
+    fde_cb = EpochFDE(loader_mm, x_tr[:512], y_tr[:512], x_val[:512], y_val[:512])
+
+    ckpt = tf.keras.callbacks.ModelCheckpoint(filepath=out_weights, monitor="val_FDE_mm", mode="min", save_best_only=True, save_weights_only=True, verbose=0)
+    early = tf.keras.callbacks.EarlyStopping(monitor="val_FDE_mm", mode="min", patience=12, restore_best_weights=True, verbose=0)
+    reduce = tf.keras.callbacks.ReduceLROnPlateau(monitor="val_FDE_mm", mode="min", factor=0.5, patience=4, min_lr=1e-5, verbose=0)
+
+    print(f"\n--- Seq2Seq {look_back}->{look_forth}  target=dv  epochs={epochs}  batch={BATCH_SIZE}")
+    model.fit(x_tr, y_tr, epochs=epochs, batch_size=BATCH_SIZE, validation_data=(x_val, y_val), shuffle=True, callbacks=[fde_cb, reduce, ckpt, early], verbose=1)
+
+    model.load_weights(out_weights)
+    print(f"[OK] saved: {out_weights}")
+
+def main():
+    seed_all(SEED)
+    train_seq2seq_block(30, 15, EPOCHS_30_15, SEQ_30_15)
+    train_seq2seq_block(60, 30, EPOCHS_60_30, SEQ_60_30)
+
+    # MLP mantido como está (não treinar)
+    # from tensorflow import keras
+    # def build_mlp(...): ...
+    # train_mlp(...)
+
+if __name__=="__main__": 
+    main()

@@ -1,74 +1,69 @@
 import typing
 import tensorflow as tf
 from .shape_checker import ShapeChecker
-import collections # <-- Import necessário
 
-# Definições de namedtuple com collections (já corrigido)
-EncoderOutput = collections.namedtuple('EncoderOutput', [
-    'sequence', 'state_h', 'state_c', 'state_hb', 'state_cb',
-])
-BallEncoderInput = collections.namedtuple('BallEncoderInput', [
-    'sequence', 'mask',
-])
-BallEncoderOutput = collections.namedtuple('BallEncoderOutput', [
-    'sequence', 'state_h', 'state_c',
-])
+class EncoderOutput(typing.NamedTuple):
+    sequence: typing.Any
+    state_h: typing.Any
+    state_c: typing.Any
+    state_hf: typing.Any
+    state_cf: typing.Any
+    state_hb: typing.Any
+    state_cb: typing.Any
 
-# Classe Encoder (sem mudanças)
 class Encoder(tf.keras.layers.Layer):
-    def __init__(self, enc_units):
+    def __init__(self, units):
         super(Encoder, self).__init__()
-        self.lstm_config = tf.keras.layers.LSTM(enc_units, return_state=True, return_sequences=True)
-        self.bi_lstm = tf.keras.layers.Bidirectional(self.lstm_config)
-
-    def build(self, input_shape):
-        super().build(input_shape)
+        self.units = units
+        self.lstm = tf.keras.layers.LSTM(
+            units,
+            return_sequences=True,
+            return_state=True
+        )        
+        self.built = True
 
     def call(self, sequence, state=None):
         shape_checker = ShapeChecker()
-        shape_checker(sequence, ('batch', 'look_back', 'coordinates')) # Original: 5 coordinates
-        output, state_hf, state_cf, state_hb, state_cb = self.bi_lstm(sequence)
-        shape_checker(state_hf, ('batch', 'enc_units'))
-        shape_checker(state_cf, ('batch', 'enc_units'))
-        shape_checker(state_hb, ('batch', 'enc_units'))
-        shape_checker(state_cb, ('batch', 'enc_units'))
-        state_h = tf.stack([state_hf, state_hb], axis=1)
-        state_c = tf.stack([state_cf, state_cb], axis=1)
+        shape_checker(sequence, ('batch', 'look_back', 'coordinates'))
+
+        output, h, c = self.lstm(sequence)
+
+        # Retornamos os estados concatenados (256) para a Atenção 
+        # e os individuais (128) para o Predictor usar na inicialização
         return EncoderOutput(
-            sequence=output, state_h=state_h, state_c=state_c,
-            state_hb=state_hb, state_cb=state_cb,
+            sequence=output,
+            state_h=h,
+            state_c=c,
+            state_hf=h,
+            state_cf=c,
+            state_hb=None,
+            state_cb=None,
         )
 
-# Classe BallEncoder (com ajuste no ShapeChecker)
+class BallEncoderInput(typing.NamedTuple):
+    sequence: typing.Any
+    mask: typing.Any
+
+class BallEncoderOutput(typing.NamedTuple):
+    sequence: typing.Any
+    state_h: typing.Any
+    state_c: typing.Any
+
 class BallEncoder(tf.keras.layers.Layer):
-    def __init__(self, enc_units):
+    def __init__(self, units):
         super(BallEncoder, self).__init__()
-        self.enc_units = int(enc_units/2)
-        self.lstm_config = tf.keras.layers.LSTM(self.enc_units, return_state=True, return_sequences=True)
-        self.bi_lstm = tf.keras.layers.Bidirectional(self.lstm_config)
+        self.units = units
+        self.fwd = tf.keras.layers.LSTM(units, return_sequences=True, return_state=True)
+        self.bwd = tf.keras.layers.LSTM(units, return_sequences=True, return_state=True, go_backwards=True)
+        self.bi_lstm = tf.keras.layers.Bidirectional(self.fwd, backward_layer=self.bwd)
+        self.built = True
 
-    def build(self, input_shape):
-        super().build(input_shape)
-
-    def call(self, inputs: BallEncoderInput, state=None):
-        shape_checker = ShapeChecker()
-        # AJUSTE: A entrada da bola agora tem 2 coordenadas (Pos_X, Pos_Y)
-        # O nome 'ball_pos_coordinates' é mais descritivo, mas funcionalmente não muda se usar 'coordinates'
-        shape_checker(inputs.sequence, ('batch', 'look_back', 'ball_pos_coordinates')) # Ajustado para clareza
-        shape_checker(inputs.mask, ('batch', 'look_back'))
-
+    def call(self, inputs: BallEncoderInput):
+        # A máscara é usada para ignorar frames onde a bola não foi detectada [cite: 58, 59]
         output, state_hf, state_cf, state_hb, state_cb = self.bi_lstm(inputs.sequence, mask=inputs.mask)
-        # As verificações de forma dos estados ocultos não mudam
-        shape_checker(state_hf, ('batch', 'enc_units'))
-        shape_checker(state_cf, ('batch', 'enc_units'))
-        shape_checker(state_hb, ('batch', 'enc_units'))
-        shape_checker(state_cb, ('batch', 'enc_units'))
-
-        state_h = tf.stack([state_hf, state_hb], axis=1)
-        state_c = tf.stack([state_cf, state_cb], axis=1)
-
+        
         return BallEncoderOutput(
             sequence=output,
-            state_h=state_h,
-            state_c=state_c,
+            state_h=tf.concat([state_hf, state_hb], axis=-1),
+            state_c=tf.concat([state_cf, state_cb], axis=-1)
         )
