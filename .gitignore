@@ -21,3 +21,6 @@ libtinfo*
 # misc
 __pycache__/
 *.pyc
+
+eval "$(ssh-agent -s)"*
+eval*
