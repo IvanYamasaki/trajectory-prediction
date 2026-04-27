@@ -2,6 +2,8 @@ from .gen import messages_robocup_ssl_wrapper_pb2 as SSL_Wrapper
 from .gen import ssl_referee_pb2 as SSL_referee
 from .MessageType import MessageType
 from google.protobuf import message
+import gzip
+import io
 
 class Reader:
 
@@ -13,12 +15,23 @@ class Reader:
     referee_packet = None
 
     def __init__(self, path):
-        self.file = open(path, 'rb')
+        # Detectar e descomprimir se necessário
+        with open(path, 'rb') as f:
+            magic = f.read(2)
+        
+        if magic == b'\x1f\x8b':  # Assinatura gzip
+            self.file = gzip.open(path, 'rb')
+        else:
+            self.file = open(path, 'rb')
 
     def read_header(self):
         name = self.file.read(12)
         version = self.file.read(4)
-        print(name.decode("ascii"))
+        try:
+            name_str = name.decode("ascii")
+            print(name_str)
+        except UnicodeDecodeError:
+            print(f"Header (raw bytes): {name}")
         print(int.from_bytes(version, signed=True, byteorder='big'))
 
     def has_next(self):

@@ -9,7 +9,7 @@ from dataset.load_dataset import LoadDataSet
 from ai_model.predictor import RobotOnlyPredictor
 
 SEED = 7
-DATASETS = ["dataset/proc_set_4"]
+DATASETS = ["dataset/proc_set_27"]
 N_SAMPLES = 5000
 N_PLOTS = 3
 UNITS = 128
@@ -112,14 +112,14 @@ def pick_seq2seq_mode(loader, x, y_v, pred_s):
     ade_dv = metrics_mm(pos_as_dv, pos_true)[0]
     return ("v", ade_v) if ade_v <= ade_dv else ("dv", ade_dv)
 
-def run_case(tag, cfg):
+def run_case(tag, cfg, datasets_to_test):
     look_back, look_forth = cfg["look_back"], cfg["look_forth"]
     seq_w, mlp_w = cfg["seq_w"], cfg["mlp_w"]
     if not os.path.exists(seq_w): raise FileNotFoundError(f"Não achei {seq_w}")
     if not os.path.exists(mlp_w): raise FileNotFoundError(f"Não achei {mlp_w}")
 
     loader = LoadDataSet(look_back, look_forth)  # aqui y é VELOCIDADE v (padrão do projeto)
-    x_all, _, _, y_v_all = loader.load_data(DATASETS, for_test=True)
+    x_all, _, _, y_v_all = loader.load_data(datasets_to_test, for_test=True)
 
     n = min(N_SAMPLES, len(x_all))
     idx = np.random.choice(len(x_all), n, replace=False)
@@ -145,13 +145,37 @@ def run_case(tag, cfg):
     mm = metrics_mm(pos_m, pos_true)
     print_table(tag, n, mk, ms, mm, mode_s)
 
-    picks = np.random.choice(n, min(N_PLOTS, n), replace=False)
-    plot_samples(tag, idx, x, pos_true, pos_k, pos_s, pos_m, loader, picks, mode_s)
+    # picks = np.random.choice(n, min(N_PLOTS, n), replace=False)
+    # plot_samples(tag, idx, x, pos_true, pos_k, pos_s, pos_m, loader, picks, mode_s)
+    
+    return mk, ms, mm
 
 def main():
     seed_all(SEED)
-    run_case("30→15", CFG["30_15"])
-    run_case("60→30", CFG["60_30"])
+    
+    print("\n" + "="*80)
+    print("COMPARAÇÃO DE MODELOS POR DATASET")
+    print("="*80)
+    
+    all_results = []
+    
+    # Processar cada dataset individualmente
+    for dataset_file in DATASETS:
+        print(f"\n>>> Processando dataset: {dataset_file}")
+        results_30_15 = run_case(f"30→15 ({dataset_file})", CFG["30_15"], [dataset_file])
+        results_60_30 = run_case(f"60→30 ({dataset_file})", CFG["60_30"], [dataset_file])
+        all_results.append((dataset_file, results_30_15, results_60_30))
+    
+    # Resumo final com todos os datasets
+    print("\n" + "="*80)
+    print("RESUMO FINAL - TODOS OS DATASETS")
+    print("="*80)
+    print(f"{'Dataset':<30} {'Config':<8} {'ADE':<10} {'FDE':<10} {'MAE':<10}")
+    print("-"*80)
+    for dataset_file, (mk_30, ms_30, mm_30), (mk_60, ms_60, mm_60) in all_results:
+        fname = dataset_file.split('/')[-1]
+        print(f"{fname:<30} {'30→15':<8} K:{mk_30[0]:<8.2f} S:{ms_30[0]:<8.2f} M:{mm_30[0]:<8.2f}")
+        print(f"{'':<30} {'60→30':<8} K:{mk_60[0]:<8.2f} S:{ms_60[0]:<8.2f} M:{mm_60[0]:<8.2f}")
 
 if __name__ == "__main__":
     main()
