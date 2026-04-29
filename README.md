@@ -33,7 +33,7 @@ my [graduation thesis](https://github.com/LucasSte/Research/blob/4c6dd15c9167050
 
 #### Train the models
 
-From the root folder, run `python3 train_models.py`. It will train three models. 
+From the root folder, run `python3 model_analise/train_models.py`. It will train three models.
 * Two models that consume only data about the robots.
 * Two models that consume data about tha ball and the robots.
 * A multilayer perceptron network.
@@ -43,10 +43,20 @@ Each model has been trained in two configurations:
 2. A look back window of 60 time steps and a prediction of 30 time steps.
 
 If you would like to visualize plots of batch error and validation error during training,
-uncomment the `plot` function in `train_models.py` and in `comparison_tests.py`.
+uncomment the `plot` function in `model_analise/train_models.py` and in
+`model_analise/comparison_tests.py`.
 
 #### Testing the models
 
-Running `python3 compare_models.py` will run all the trained configurations in a testing set.
+Running `python3 model_analise/compare_models.py` will run all the trained configurations in a testing set.
 It will calculate the mean average error, average displacement error and final displacement error and print them.
 It will also measure such metrics for a Kalman predictor, which serves as a reference for comparison.
+
+### Project layout
+
+The workspace is organized by responsibility:
+
+* `weights/`: model weight files (`*.h5`).
+* `model_analise/`: model architecture, training, comparison, debugging, and result extraction scripts.
+* `drift_analise/`: drift-analysis notebooks and drift-specific scripts.
+* `Relas/`: report material, pipeline documentation, and generated report outputs.

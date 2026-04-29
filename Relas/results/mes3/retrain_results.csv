@@ -1,0 +1,2 @@
+breakpoint_label,breakpoint_idx,n_train,n_test,ade_before,ade_after,delta_mm,delta_pct,recovery_pct,n_traj_improved,n_traj_degraded,catastrophic_ratio
+antes_2022,0,60000,120000,4.9158,4.6747,-0.2411,-4.9,,65502,54498,0.832

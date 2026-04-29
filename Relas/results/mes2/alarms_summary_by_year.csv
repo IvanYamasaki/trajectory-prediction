@@ -1,0 +1,13 @@
+method,drift_type,year,n_alarmes
+ADWIN_ADE_seq2seq_30_15,Erro (online),2019,61
+ADWIN_ADE_seq2seq_30_15,Erro (online),2021,45
+ADWIN_ADE_seq2seq_30_15,Erro (online),2022,15
+ADWIN_ADE_seq2seq_30_15,Erro (online),2023,64
+ADWIN_ADE_seq2seq_30_15,Erro (online),2024,57
+ADWIN_ADE_seq2seq_30_15,Erro (online),2025,40
+PageHinkley_ADE_seq2seq_30_15,Erro (online),2019,336
+PageHinkley_ADE_seq2seq_30_15,Erro (online),2021,414
+PageHinkley_ADE_seq2seq_30_15,Erro (online),2022,247
+PageHinkley_ADE_seq2seq_30_15,Erro (online),2023,362
+PageHinkley_ADE_seq2seq_30_15,Erro (online),2024,332
+PageHinkley_ADE_seq2seq_30_15,Erro (online),2025,330

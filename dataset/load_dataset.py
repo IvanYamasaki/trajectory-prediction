@@ -116,7 +116,7 @@ class LoadDataSet:
             speed_y = np.concatenate([np.array([local['v_y'][0]]*diff), speed_y], axis=0)
             mask[0:diff] = [False]*diff
 
-        return np.stack([pos_x, pos_y, speed_x, speed_y]).T, np.array(mask, dtype=np.bool)
+        return np.stack([pos_x, pos_y, speed_x, speed_y]).T, np.array(mask, dtype=bool)
 
     @staticmethod
     def get_robot_data(data, index):
@@ -174,7 +174,7 @@ class LoadDataSet:
             robot_pair = LoadDataSet.get_robot_data(robot_data, k)
             self.process_points(robot_pair, data_x, data_y, ball_x, ball_data, stop_id, time_c, ball_mask, y_dim)
 
-        return np.array(data_x), np.array(ball_x), np.array(ball_mask, dtype=np.bool), np.array(data_y)
+        return np.array(data_x), np.array(ball_x), np.array(ball_mask, dtype=bool), np.array(data_y)
     
     def process_points(self, robot_pair, data_x, data_y, ball_x, ball_data, stop_id, time_c, mask, y_dim):
         for i in range(len(robot_pair) - self.look_back - self.look_forth):
@@ -206,7 +206,7 @@ class LoadDataSet:
         robot_pair = LoadDataSet.get_robot_data(robot_data, index)
         # Usa y_dim=2 para manter consistência com o modelo treinado
         self.process_points(robot_pair, data_x, data_y, ball_x, ball_data, stop_id, time_c, ball_mask, 2)
-        return np.array(data_x), np.array(ball_x), np.array(ball_mask, dtype=np.bool), np.array(data_y)
+        return np.array(data_x), np.array(ball_x), np.array(ball_mask, dtype=bool), np.array(data_y)
     
     def convert_to_real(self, robot_data):
         for i in range(np.shape(robot_data)[0]):
@@ -226,5 +226,10 @@ class LoadDataSet:
 
     def convert_batch(self, x, y):
         last_pos = x[:, self.look_back - 1, 0:2] * self.robots_std[0:2] + self.robots_avg[0:2]
-        v = y * self.robots_std[2:4] + self.robots_avg[2:4]
+        if self.target == "dv":
+            v0 = x[:, self.look_back - 1, 2:4] * self.robots_std[2:4] + self.robots_avg[2:4]
+            dv = y * self.robots_std[2:4]
+            v = v0[:, None, :] + np.cumsum(dv, axis=1)
+        else:
+            v = y * self.robots_std[2:4] + self.robots_avg[2:4]
         return last_pos[:, None, :] + np.cumsum(v, axis=1)

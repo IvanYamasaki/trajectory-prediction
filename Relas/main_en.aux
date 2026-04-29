@@ -1,0 +1,70 @@
+\relax 
+\providecommand \babel@aux [2]{\global \let \babel@toc \@gobbletwo }
+\@nameuse{bbl@beforestart}
+\citation{kitano1997}
+\citation{sutskever}
+\citation{seq2seq}
+\citation{gama2014}
+\babel@aux{english}{}
+\@writefile{toc}{\contentsline {title}{Data Drift in a Seq2Seq Model for SSL Robot Trajectory Prediction}{1}{}\protected@file@percent }
+\@writefile{toc}{\authcount {3}}
+\@writefile{toc}{\contentsline {author}{Ivan Yamasaki \and Marcos R. O. A. M\'aximo \and Paulo Tasinaffo}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{}\protected@file@percent }
+\citation{kalman}
+\citation{yan2014,yuan2015,ryang2016}
+\citation{seq2seq,sutskever}
+\citation{alahi2016}
+\citation{salzmann2020}
+\citation{seq2seq}
+\citation{bahdanau}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Background: Seq2Seq Model for SSL Trajectory Prediction}{2}{}\protected@file@percent }
+\newlabel{eq:attn_score}{{1}{3}{}{equation.1}{}}
+\newlabel{eq:attn_alpha}{{2}{3}{}{equation.2}{}}
+\newlabel{eq:attn_ctx}{{3}{3}{}{equation.3}{}}
+\newlabel{eq:dec_out}{{4}{3}{}{equation.4}{}}
+\newlabel{eq:loss}{{5}{3}{}{equation.5}{}}
+\citation{adam}
+\citation{barrat}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Methodology}{4}{}\protected@file@percent }
+\newlabel{eq:kalman_dyn}{{6}{4}{}{equation.6}{}}
+\newlabel{eq:ade}{{7}{4}{}{equation.7}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Results and Discussion}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Seq2seq Performance Over Time}{5}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Evolution of the seq2seq ADE over the years, separated by prediction horizon.}}{5}{}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{fig:ade_por_ano}{{1}{5}{}{figure.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Comparison with Kalman Filter}{5}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Comparison of ADE between Seq2Seq and Kalman over the years, separated by horizon.}}{6}{}\protected@file@percent }
+\newlabel{fig:seq_kalman}{{2}{6}{}{figure.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Percentage increase of ADE with respect to 2019 for Seq2Seq and Kalman, separated by horizon.}}{6}{}\protected@file@percent }
+\newlabel{fig:perc_ade}{{3}{6}{}{figure.3}{}}
+\citation{kolmogorov}
+\citation{villani}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Drift in Kinematic Variables}{7}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Yearly evolution of KS and WD drift metrics for speed, acceleration, and turn-rate variables, computed relative to the 2019 baseline. Rising values indicate increasing distributional shift away from the training distribution.}}{7}{}\protected@file@percent }
+\newlabel{fig:ks_wd}{{4}{7}{}{figure.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}OLS Regression Analysis}{8}{}\protected@file@percent }
+\newlabel{eq:ols_ks}{{8}{8}{}{equation.8}{}}
+\newlabel{eq:ols_wd}{{9}{8}{}{equation.9}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Visual summary of the OLS analysis relating \(\Delta ADE\) with drift metrics.}}{8}{}\protected@file@percent }
+\newlabel{fig:ols_ks_wd}{{5}{8}{}{figure.5}{}}
+\citation{seq2seq}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Conclusions and Future Work}{9}{}\protected@file@percent }
+\citation{seq2seq}
+\citation{gama2014}
+\bibcite{sutskever}{1}
+\bibcite{seq2seq}{2}
+\bibcite{bahdanau}{3}
+\bibcite{kalman}{4}
+\bibcite{adam}{5}
+\bibcite{barrat}{6}
+\bibcite{kolmogorov}{7}
+\bibcite{villani}{8}
+\bibcite{kitano1997}{9}
+\bibcite{alahi2016}{10}
+\bibcite{salzmann2020}{11}
+\bibcite{gama2014}{12}
+\bibcite{yan2014}{13}
+\bibcite{yuan2015}{14}
+\bibcite{ryang2016}{15}
+\gdef \@abspage@last{11}
