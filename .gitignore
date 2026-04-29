@@ -24,3 +24,9 @@ __pycache__/
 
 eval "$(ssh-agent -s)"*
 eval*
+
+# computed outputs (regenerable)
+covariate_shift_out/
+drift_analise/drift_analise.nbconvert.ipynb
+pdf_comments_extracted.txt
+dataset/blender-5.0.1-windows-x64.msi

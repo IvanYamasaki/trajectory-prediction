@@ -20,7 +20,7 @@ Saída:
 
 Uso:
     python model_analise/retrain_at_breakpoints.py
-    python model_analise/retrain_at_breakpoints.py --penalty 5 --epochs 10
+    python model_analise/retrain_at_breakpoints.py --penalty 1 --epochs 10
 """
 from __future__ import annotations
 
@@ -44,7 +44,7 @@ LOOK_FORTH  = 15
 HORIZON     = "30→15"
 UNITS       = 128
 WEIGHTS_IN  = Path("weights") / "robot_30_15_t.weights.h5"
-STATS_PATH  = Path("normalization_stats_30_15.pkl")
+STATS_PATH  = Path("model") / "normalization_stats_30_15.pkl"
 COV_DIR     = Path("covariate_shift_out")
 OUT_DIR     = Path("Relas") / "results" / "mes3"
 WEIGHTS_DIR = Path("weights")
@@ -131,14 +131,20 @@ def build_model(tf):
     return m
 
 
-def freeze_encoder(model):
-    """Congela todas as camadas exceto a última Dense (decoder head)."""
-    for layer in model.layers[:-1]:
+def freeze_encoder(model, n_unfreeze: int = 1):
+    """Congela todas as camadas exceto as ultimas ``n_unfreeze``.
+
+    n_unfreeze=1 -> so Dense final (default conservador, baseline)
+    n_unfreeze=2 -> Dense final + camada anterior (recomendado pos-review M3)
+    """
+    for layer in model.layers:
         layer.trainable = False
-    model.layers[-1].trainable = True
+    for layer in model.layers[-n_unfreeze:]:
+        layer.trainable = True
     frozen = sum(1 for l in model.layers if not l.trainable)
     trainable = sum(1 for l in model.layers if l.trainable)
-    print(f"  [freeze] {frozen} frozen, {trainable} trainable layers.")
+    print(f"  [freeze] {frozen} frozen, {trainable} trainable layers "
+          f"(n_unfreeze={n_unfreeze}).")
 
 
 def compute_ade(model, x, y_v, loader, batch=512):
@@ -170,7 +176,7 @@ def detect_pelt_breakpoints(penalty: float) -> list[BreakpointInfo]:
     """
     import ruptures as rpt
 
-    ds = pd.read_csv("dataset.csv")
+    ds = pd.read_csv("drift_analise/dataset/dataset.csv")
     seq = (
         ds[(ds["model"] == "Seq2Seq") & (ds["horizon"] == "30→15")]
         .sort_values(["year", "dataset"])
@@ -216,14 +222,21 @@ def detect_pelt_breakpoints(penalty: float) -> list[BreakpointInfo]:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--penalty",   type=float, default=5.0,
+    ap.add_argument("--penalty",     type=float, default=5.0,
                     help="Penalidade Pelt (default 5)")
-    ap.add_argument("--epochs",    type=int,   default=10)
-    ap.add_argument("--lr",        type=float, default=1e-4)
-    ap.add_argument("--batch",     type=int,   default=256)
-    ap.add_argument("--max_per",   type=int,   default=5000,
-                    help="Máximo de janelas por jogo")
-    ap.add_argument("--seed",      type=int,   default=42)
+    ap.add_argument("--epochs",      type=int,   default=20,
+                    help="Numero de epocas (era 10; review pediu mais).")
+    ap.add_argument("--lr",          type=float, default=1e-5,
+                    help="Learning rate (era 1e-4; review pediu menor).")
+    ap.add_argument("--batch",       type=int,   default=256)
+    ap.add_argument("--max_per",     type=int,   default=5000,
+                    help="Maximo de janelas por jogo")
+    ap.add_argument("--seed",        type=int,   default=42)
+    ap.add_argument("--n_unfreeze",  type=int,   default=2,
+                    help="Quantas camadas finais descongelar (default 2 pos-review).")
+    ap.add_argument("--early_stop_cat_ratio", type=float, default=0.5,
+                    help="Para o treino se catastrophic_ratio passar deste valor "
+                         "(testa apos cada epoca). Default 0.5.")
     args = ap.parse_args()
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -274,19 +287,38 @@ def main() -> None:
         ade_before_per = per_traj_ade(model, x_test, y_test, loader)
         print(f"  ADE antes fine-tuning: {ade_before:.4f} mm")
 
-        # ─── fine-tuning ────────────────────────────────────────────────
-        freeze_encoder(model)
+        # --- fine-tuning com early-stop por catastrophic_ratio --------
+        freeze_encoder(model, n_unfreeze=args.n_unfreeze)
         model.compile(
             optimizer=tf.keras.optimizers.Adam(args.lr),
             loss=tf.keras.losses.MeanSquaredError(),
         )
-        model.fit(
-            x_train, y_train,
-            epochs=args.epochs,
-            batch_size=args.batch,
-            validation_split=0.1,
-            verbose=1,
-        )
+        epoch_log = []
+        for ep in range(args.epochs):
+            hist = model.fit(
+                x_train, y_train,
+                epochs=1, batch_size=args.batch,
+                validation_split=0.1, verbose=0,
+            )
+            ade_now_per = per_traj_ade(model, x_test, y_test, loader)
+            delta_now = ade_now_per - ade_before_per
+            n_imp = int(np.sum(delta_now < 0))
+            n_deg = int(np.sum(delta_now > 0))
+            cat   = n_deg / max(n_imp, 1)
+            epoch_log.append({
+                "epoch": ep + 1,
+                "loss":  float(hist.history["loss"][-1]),
+                "val_loss": float(hist.history.get("val_loss", [float("nan")])[-1]),
+                "cat_ratio": cat,
+                "n_improved": n_imp, "n_degraded": n_deg,
+            })
+            print(f"  ep {ep+1:>2}/{args.epochs}  "
+                  f"loss={hist.history['loss'][-1]:.4f}  "
+                  f"cat_ratio={cat:.3f}  ({n_imp}+/{n_deg}-)")
+            if cat > args.early_stop_cat_ratio:
+                print(f"  [early-stop] cat_ratio {cat:.3f} > "
+                      f"{args.early_stop_cat_ratio}. Parando.")
+                break
 
         # ─── DEPOIS do fine-tuning ──────────────────────────────────────
         ade_after = compute_ade(model, x_test, y_test, loader)
@@ -324,6 +356,10 @@ def main() -> None:
             "breakpoint_idx":     bp_enum,
             "n_train":            len(x_train),
             "n_test":             len(x_test),
+            "n_unfreeze":         args.n_unfreeze,
+            "lr":                 args.lr,
+            "epochs_run":         len(epoch_log),
+            "epochs_budget":      args.epochs,
             "ade_before":         round(ade_before, 4),
             "ade_after":          round(ade_after, 4),
             "delta_mm":           round(delta_mm, 4),
@@ -333,6 +369,10 @@ def main() -> None:
             "n_traj_degraded":    n_degraded,
             "catastrophic_ratio": round(catastrophic, 3),
         })
+
+        # log por epoca (auditavel)
+        pd.DataFrame(epoch_log).to_csv(
+            OUT_DIR / f"retrain_epoch_log_bp{bp_enum}.csv", index=False)
 
     if not results:
         print("[err] nenhum breakpoint processado.")

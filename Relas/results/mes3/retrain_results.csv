@@ -1,2 +1,2 @@
-breakpoint_label,breakpoint_idx,n_train,n_test,ade_before,ade_after,delta_mm,delta_pct,recovery_pct,n_traj_improved,n_traj_degraded,catastrophic_ratio
-antes_2022,0,60000,120000,4.9158,4.6747,-0.2411,-4.9,,65502,54498,0.832
+breakpoint_label,breakpoint_idx,n_train,n_test,n_unfreeze,lr,epochs_run,epochs_budget,ade_before,ade_after,delta_mm,delta_pct,recovery_pct,n_traj_improved,n_traj_degraded,catastrophic_ratio
+antes_2022,0,60000,120000,2,1e-05,1,10,4.9158,4.7839,-0.1319,-2.68,32.69,65932,54068,0.82

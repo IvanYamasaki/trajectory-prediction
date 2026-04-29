@@ -1,0 +1,2 @@
+epoch,loss,val_loss,cat_ratio,n_improved,n_degraded
+1,0.0,0.0,0.8200570284535582,65932,54068

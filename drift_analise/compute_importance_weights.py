@@ -51,7 +51,7 @@ ALL_TARGETS  = [2021, 2022, 2023, 2024, 2025]
 HORIZON      = "30→15"
 LOOK_BACK    = 30
 LOOK_FORTH   = 15
-STATS_PATH   = Path("normalization_stats_30_15.pkl")
+STATS_PATH   = PROJECT_ROOT / "model" / "normalization_stats_30_15.pkl"
 
 
 # ─────────────────────────── loaders ──────────────────────────────────────
@@ -229,6 +229,9 @@ def main() -> None:
     ap.add_argument("--reg",          type=float, default=1e-3)
     ap.add_argument("--n_boot",       type=int,   default=2000)
     ap.add_argument("--seed",         type=int,   default=42)
+    ap.add_argument("--per_feature",  action="store_true",
+                    help="Roda LSIF marginal em cada feature isoladamente "
+                         "para identificar a dimensão dominante.")
     args = ap.parse_args()
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -251,6 +254,7 @@ def main() -> None:
     print(f"[info] ADE 2019 (sem pesos): {ade_2019_mean:.4f} mm")
 
     rows_iw = []
+    rows_per_feat: list[dict] = []   # preenchido se --per_feature
 
     for year in sorted(args.target_years):
         tgt_rows_raw = df_all[df_all["year"] == year].reset_index(drop=True)
@@ -286,14 +290,50 @@ def main() -> None:
         else:
             ci_lo_iw, ci_hi_iw = np.nan, np.nan
 
+        # ────────── recovery_pct robusto a casos degenerados ──────────
+        # Caso 1: ADE_y <= ADE_2019  -> não há excesso a recuperar.
+        #         Reportar excess=0, recovery=NaN, note explicativa.
+        # Caso 2: ADE_y >  ADE_2019  -> recovery clipado em [0, 100],
+        #         flag overshoot=True quando excederia 100.
         excess = ade_y_mean - ade_2019_mean
-        if abs(excess) > 1e-6:
-            recovery = (ade_y_mean - ade_iw) / excess * 100.0
+        if excess <= 1e-6:
+            recovery_raw   = np.nan
+            recovery       = np.nan
+            overshoot      = False
+            recovery_note  = "no_excess"
         else:
-            recovery = np.nan
+            recovery_raw = (ade_y_mean - ade_iw) / excess * 100.0
+            overshoot    = bool(recovery_raw > 100.0 or recovery_raw < 0.0)
+            recovery     = float(np.clip(recovery_raw, 0.0, 100.0))
+            recovery_note = ("overshoot_high" if recovery_raw > 100 else
+                             "overshoot_low"  if recovery_raw < 0   else "ok")
+
+        # bootstrap CI95 do recovery_pct (só se houver excess)
+        if np.isfinite(recovery):
+            rng_b = np.random.default_rng(args.seed + year)
+            recov_boots = np.empty(args.n_boot)
+            for b in range(args.n_boot):
+                idx_y = rng_b.integers(0, len(ade_y), size=len(ade_y))
+                idx_2 = rng_b.integers(0, len(ade_2019_all), size=len(ade_2019_all))
+                m_y  = float(np.mean(ade_y[idx_y]))
+                m_2  = float(np.mean(ade_2019_all[idx_2]))
+                m_iw_b = float((w[idx_y] @ ade_y[idx_y]) / max(w[idx_y].sum(), 1e-9))
+                ex_b = m_y - m_2
+                if ex_b > 1e-6:
+                    rb = (m_y - m_iw_b) / ex_b * 100.0
+                    recov_boots[b] = float(np.clip(rb, 0.0, 100.0))
+                else:
+                    recov_boots[b] = np.nan
+            valid = recov_boots[np.isfinite(recov_boots)]
+            recovery_ci_lo = float(np.percentile(valid, 2.5)) if valid.size else np.nan
+            recovery_ci_hi = float(np.percentile(valid, 97.5)) if valid.size else np.nan
+        else:
+            recovery_ci_lo = recovery_ci_hi = np.nan
 
         print(f"  ADE_y={ade_y_mean:.4f}  ADE_IW={ade_iw:.4f}  "
-              f"ADE_2019={ade_2019_mean:.4f}  recovery={recovery:.1f}%")
+              f"ADE_2019={ade_2019_mean:.4f}  "
+              f"recovery={recovery if np.isfinite(recovery) else 'n/a':>5}%  "
+              f"[{recovery_note}]")
 
         np.save(COV_DIR / f"importance_weights_{year}.npy", w)
 
@@ -309,9 +349,41 @@ def main() -> None:
             "ess_ratio":      round(ess, 4),
             "ess_stable":     stable,
             "recovery_pct":   round(recovery, 2) if np.isfinite(recovery) else np.nan,
+            "recovery_ci_lo": round(recovery_ci_lo, 2) if np.isfinite(recovery_ci_lo) else np.nan,
+            "recovery_ci_hi": round(recovery_ci_hi, 2) if np.isfinite(recovery_ci_hi) else np.nan,
+            "recovery_raw":   round(recovery_raw, 2) if np.isfinite(recovery_raw) else np.nan,
+            "overshoot":      overshoot,
+            "recovery_note":  recovery_note,
+            "excess_total":   round(excess, 4),
             "n_source":       len(x_src_raw),
             "n_target":       len(x_tgt_raw),
         })
+
+        # ─────────── IW marginal por feature (Bloco B do review) ────────
+        if args.per_feature and excess > 1e-6:
+            FEAT_NAMES = ["speed_mean", "speed_p90", "speed_p99",
+                          "accel_mean", "accel_p90", "accel_p99",
+                          "turn_mean", "turn_p90"]
+            for f_idx, f_name in enumerate(FEAT_NAMES):
+                xs_f = xs[:, f_idx:f_idx + 1]
+                xt_f = xt[:, f_idx:f_idx + 1]
+                w_f  = lsif_weights(xs_f, xt_f, n_centers=args.n_centers,
+                                    reg=args.reg, seed=args.seed)
+                ess_f = ess_ratio(w_f)
+                ade_iw_f = float((w_f @ ade_y) / w_f.sum()) if w_f.sum() > 0 else np.nan
+                rec_raw_f = ((ade_y_mean - ade_iw_f) / excess * 100.0
+                             if np.isfinite(ade_iw_f) else np.nan)
+                rec_f = (float(np.clip(rec_raw_f, 0.0, 100.0))
+                         if np.isfinite(rec_raw_f) else np.nan)
+                rows_per_feat.append({
+                    "year": year, "feature": f_name,
+                    "ade_iw": round(ade_iw_f, 4) if np.isfinite(ade_iw_f) else np.nan,
+                    "ess_ratio": round(ess_f, 4),
+                    "recovery_pct": round(rec_f, 2) if np.isfinite(rec_f) else np.nan,
+                    "recovery_raw": round(rec_raw_f, 2) if np.isfinite(rec_raw_f) else np.nan,
+                })
+            print(f"  [per-feature] {len([r for r in rows_per_feat if r['year']==year])} "
+                  f"linhas adicionadas")
 
     if not rows_iw:
         print("[err] nenhum ano processado.")
@@ -329,6 +401,14 @@ def main() -> None:
     legacy["ade_unweighted"] = ade_2019_mean
     legacy["ratio"] = legacy["ade_weighted"] / ade_2019_mean
     legacy.to_csv(OUT_DIR / "importance_weighted_ade.csv", index=False)
+
+    # IW marginal por feature
+    if rows_per_feat:
+        df_pf = pd.DataFrame(rows_per_feat)
+        pf_path = OUT_DIR / "iw_per_feature.csv"
+        df_pf.to_csv(pf_path, index=False)
+        print(f"\n[ok] {pf_path}  ({len(df_pf)} linhas)")
+        print(df_pf.to_string(index=False))
 
 
 if __name__ == "__main__":

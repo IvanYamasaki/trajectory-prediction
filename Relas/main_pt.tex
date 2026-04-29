@@ -25,7 +25,9 @@ Paulo Tasinaffo\inst{3}\orcidID{}}
 \begin{abstract}
 Este artigo analisa \textit{data drift} em um modelo \textit{sequence-to-sequence} (seq2seq) para predi\c{c}\~ao de trajet\'orias de rob\^os na RoboCup Small Size League (SSL). O modelo foi treinado com dados de 2019 e avaliado em temporadas posteriores, com foco em dois horizontes de predi\c{c}\~ao. O objetivo \'e medir como o erro, resumido principalmente pelo \textit{Average Displacement Error} (ADE), evolui ao longo do tempo, como essa evolu\c{c}\~ao se compara a um benchmark baseado em filtro de Kalman e em que medida mudan\c{c}as observ\'aveis na din\^amica do jogo acompanham essa degrada\c{c}\~ao.
 
-Os resultados mostram aumento do erro absoluto do seq2seq nos anos posteriores ao treinamento, caracterizando perda de desempenho fora da distribui\c{c}\~ao original. Ao mesmo tempo, a vantagem relativa do seq2seq sobre o Kalman aumenta, sugerindo que ambos sofrem com a mudan\c{c}a temporal dos dados, mas o Kalman degrada mais rapidamente. Como an\'alise complementar, o artigo emprega regress\~oes \textit{Ordinary Least Squares} (OLS) relacionando a varia\c{c}\~ao do ADE com m\'etricas de drift baseadas em Kolmogorov--Smirnov e Wasserstein, controlando efeitos fixos de ano. Essa etapa \'e interpretada como evid\^encia explorat\'oria de associa\c{c}\~ao, e n\~ao como identifica\c{c}\~ao causal.
+Os resultados mostram aumento do erro absoluto do seq2seq nos anos posteriores ao treinamento, caracterizando perda de desempenho fora da distribui\c{c}\~ao original. Ao mesmo tempo, a vantagem relativa do seq2seq sobre o Kalman aumenta, sugerindo que ambos sofrem com a mudan\c{c}a temporal dos dados, mas o Kalman degrada mais rapidamente. Como an\'alise complementar, o artigo emprega regress\~oes \textit{Ordinary Least Squares} (OLS) relacionando a varia\c{c}\~ao do ADE com m\'etricas de drift baseadas em Kolmogorov--Smirnov e Wasserstein, controlando efeitos fixos de ano.
+
+Para quantificar a \emph{origem} do drift, o artigo aplica \textit{importance weighting} via LSIF~\cite{kliep}: entre 59\,\% e 72\,\% do excesso de ADE \'e explic\'avel por \emph{covariate shift} nas features cinem\'aticas de entrada, com acelera\c{c}\~ao de cauda (\texttt{accel\_p99}) como dimens\~ao dominante. Uma tentativa de adapta\c{c}\~ao por fine-tuning seletivo \'e avaliada; os resultados indicam que a recupera\c{c}\~ao m\'edia \'e modesta e acompanhada de \emph{catastrophic interference} severo nas trajet\'orias individuais.
 \keywords{predi\c{c}\~ao de trajet\'orias \and seq2seq \and data drift \and RoboCup SSL \and Kalman}
 \end{abstract}
 
@@ -194,6 +196,51 @@ Apesar dessas limita\c{c}\~oes, a OLS ainda \'e \'util como exerc\'icio explorat
 
 Em outras palavras, esta se\c{c}\~ao deve ser lida como um ponto de partida para uma agenda de infer\^encia mais forte, e n\~ao como sua etapa final. Um pr\'oximo passo natural \'e migrar da an\'alise anual agregada para uma base mais granular, por partida, janela temporal ou bloco de jogadas, permitindo observar varia\c{c}\~ao intra-ano e distinguir melhor o efeito de tempo do efeito do drift mensurado. Com essa granularidade maior, uma estrat\'egia promissora seria modelar explicitamente a exposi\c{c}\~ao ao drift como ``tratamento'' cont\'inuo e estudar sua associa\c{c}\~ao com o erro por meio de um desenho causal mais estruturado, com efeitos fixos e testes de robustez temporal.
 
+\section{Detec\c{c}\~ao formal de drift}
+
+Para complementar a an\'alise descritiva, foram aplicados detectores
+formais sobre os streams temporais de ADE e de features cinem\'aticas.
+Quatro detectores foram calibrados para o dom\'inio SSL: ADWIN
+($\delta=0{,}002$), Page-Hinkley (threshold\,=\,5\,mm), KSWIN
+(window\,=\,30, $\alpha=0{,}005$) e Pelt~RBF. Um \emph{null detector}
+por permuta\c{c}\~ao ($n=50$) confirmou que os alarmes t\^em $p$-valor
+emp\'irico $< 0{,}05$, afastando a hip\'otese de ru\'ido temporal.
+O Pelt identificou um \'unico breakpoint inter-ano robusto: transi\c{c}\~ao
+2019+2021\,$\to$\,2022, demarcando o ponto a partir do qual o modelo
+come\c{c}a a ser avaliado fora de sua distribui\c{c}\~ao efetiva de treino.
+
+\section{Adapta\c{c}\~ao ao drift}
+
+A origem do excesso de ADE foi decomposta via LSIF (\emph{Least-Squares
+Importance Fitting})~\cite{kliep}, que estima a raz\~ao de densidades
+$\hat{w}(x) = p_{\text{alvo}}(x)/p_{2019}(x)$ sobre as oito features
+cinem\'aticas por jogo sem estimar as densidades individualmente.
+A \emph{recovery} mede a fra\c{c}\~ao do excesso total atribu\'ida a
+\emph{covariate shift}:
+\begin{equation}\label{eq:recovery}
+\mathrm{recovery}(y) =
+    \frac{\mathrm{ADE}_y - \mathrm{ADE}_{\mathrm{IW}}(y)}
+         {\mathrm{ADE}_y - \mathrm{ADE}_{2019}} \times 100\,\%.
+\end{equation}
+
+Para os anos com excesso positivo (2021, 2022, 2023, 2025), a recovery
+ficou entre 59\,\% e 72\,\% (IC\,95\,\% via bootstrap; $n=48\,000$
+trajet\'orias por ano), com mediana $\approx 63\,\%$. O ESS ratio acima de
+0{,}57 em todos os casos confirma a estabilidade do estimador. A feature
+dominante \'e \texttt{accel\_p99}: usada isoladamente, explica mais de
+50\,\% do excesso em todos os anos analisados e seu ranking estabiliza
+entre temporadas.
+
+Uma tentativa de adapta\c{c}\~ao por fine-tuning seletivo (encoder
+congelado, 2 camadas do decoder descongeladas, lr\,=\,$10^{-5}$, early-stop
+por \texttt{cat\_ratio}) reduziu o ADE m\'edio em apenas $0{,}13$\,mm
+($-2{,}7\,\%$), com recovery\,=\,32{,}7\,\%. O \texttt{cat\_ratio}\,=\,0{,}82
+j\'a na 1\textordfeminine{} \'epoca indica que a melhora na m\'edia vem \`a custa
+de degrada\c{c}\~ao severa em trajet\'orias individuais: para cada trajet\'oria
+melhorada, 0{,}82 foram pioradas. A valida\c{c}\~ao por divis\~ao confirmou
+que o drift \'e real e intra-divis\~ao (todos os dados p\'os-2021 pertencem
+\`a Divis\~ao\,A; Divis\~ao\,B ausente no conjunto de dados).
+
 \section{Discuss\~ao}
 Os resultados do artigo apontam para tr\^es mensagens principais.
 
@@ -205,6 +252,8 @@ A terceira mensagem \'e mais moderada: parte dessa varia\c{c}\~ao do erro parece
 
 Essa distin\c{c}\~ao \'e importante para a interpreta\c{c}\~ao do artigo. A contribui\c{c}\~ao principal do trabalho \'e emp\'irica e diagn\'ostica: mostrar que o desempenho fora do per\'iodo de treino se deteriora e que essa deteriora\c{c}\~ao \'e consistente com mudan\c{c}a de distribui\c{c}\~ao. A parte econom\'etrica entra como apoio anal\'itico, ajudando a organizar hip\'oteses sobre o mecanismo do drift, mas sem ainda resolv\^e-las de forma causal.
 
+A an\'alise por importance weighting adiciona uma quarta mensagem: o drift \'e predominantemente covariate. A mediana de recovery $\approx 63\,\%$ indica que corrigir a distribui\c{c}\~ao de entrada pelo LSIF recupera cerca de dois ter\c{c}os do excesso de ADE, com \texttt{accel\_p99} como dimens\~ao dominante. O ter\c{c}o restante ($\approx 37\,\%$) n\~ao \'e explicado por covariate shift, sugerindo algum concept drift residual que n\~ao pode ser corrigido por repondera\c{c}\~ao. Do lado da adapta\c{c}\~ao, os experimentos de fine-tuning mostram que a simples atualiza\c{c}\~ao dos pesos do decoder n\~ao resolve o problema: o \emph{catastrophic interference} \'e imediato e severo. Esses resultados combinados configuram o Cen\'ario~3 descritivo: o drift \'e real, detectado formalmente e parcialmente explic\'avel, mas a adapta\c{c}\~ao efetiva requer estrat\'egias mais sofisticadas do que fine-tuning padr\~ao.
+
 Tamb\'em \'e importante delimitar com clareza o escopo da contribui\c{c}\~ao frente ao artigo de Steuernagel e M\'aximo~\cite{seq2seq}. O presente trabalho herda desse artigo o n\'ucleo arquitetural do preditor neural e o benchmark comparativo com Kalman. O avan\c{c}o aqui est\'a em deslocar a pergunta de pesquisa: em vez de perguntar apenas se o seq2seq supera o benchmark em um recorte fixo, pergunta-se como esse ganho evolui quando a distribui\c{c}\~ao temporal dos dados se afasta do ambiente de treino.
 
 Nesse sentido, uma agenda natural de continuidade seria investigar diretamente se o drift afeta mais o seq2seq ou o Kalman em magnitude marginal. Em vez de modelar apenas o erro absoluto, uma extens\~ao interessante \'e usar como vari\'avel dependente a diferen\c{c}a \(ADE^{Kalman} - ADE^{Seq2Seq}\) ou sua raz\~ao relativa. Isso permitiria estudar n\~ao apenas se h\'a drift, mas em que contextos ele amplia mais a vantagem comparativa do modelo neural sobre o benchmark cl\'assico.
@@ -215,7 +264,9 @@ Este artigo analisou a estabilidade temporal de um modelo seq2seq para predi\c{c
 
 Portanto, a conclus\~ao principal \'e dupla. Primeiro, h\'a evid\^encia clara de degrada\c{c}\~ao temporal no seq2seq. Segundo, o Kalman parece sofrer ainda mais com a mudan\c{c}a temporal da distribui\c{c}\~ao dos dados. As m\'etricas KS e WD, juntamente com a an\'alise OLS, refor\c{c}am a interpreta\c{c}\~ao de que o aumento do erro acompanha mudan\c{c}as mensur\'aveis na din\^amica observada das partidas.
 
-Ao mesmo tempo, o artigo delimita o alcance dessa infer\^encia. A regress\~ao OLS deve ser lida como an\'alise explorat\'oria complementar, \'util para orientar hip\'oteses e pr\'oximos testes, mas insuficiente para sustentar causalidade. O avan\c{c}o natural a partir daqui \'e construir uma an\'alise com maior granularidade temporal e desenho inferencial mais forte, capaz de avaliar de forma mais direta como a exposi\c{c}\~ao ao drift afeta o erro de predi\c{c}\~ao dos diferentes modelos. Em termos de cr\'edito cient\'ifico, o presente estudo se apoia diretamente na linha inaugurada por Lucas Steuernagel e Marcos M\'aximo~\cite{seq2seq}, estendendo-a do problema de desempenho pontual para o problema de estabilidade temporal.
+Ao mesmo tempo, o artigo delimita o alcance dessa infer\^encia. A regress\~ao OLS deve ser lida como an\'alise explorat\'oria complementar, \'util para orientar hip\'oteses e pr\'oximos testes, mas insuficiente para sustentar causalidade.
+
+A quantifica\c{c}\~ao via LSIF revelou que \texttt{accel\_p99} \'e a feature de covariate shift dominante, com ranking est\'avel entre temporadas. Isso sugere que a SSL passou a exibir partidas com din\^amica de acelera\c{c}\~ao mais agressiva ao longo dos anos, e que esse \'e o principal vetor de degrada\c{c}\~ao do modelo. Uma agenda natural de continuidade seria, portanto, incorporar essa dimens\~ao diretamente no modelo, seja como feature de condi\c{c}\~ao do encoder, seja via retrining incremental com estrat\'egias que mitiguem \emph{catastrophic interference} (e.g., EWC, replay de trajet\'orias de treino, ou adapta\c{c}\~ao do encoder em vez de apenas do decoder). Em termos de cr\'edito cient\'ifico, o presente estudo se apoia diretamente na linha inaugurada por Steuernagel e M\'aximo~\cite{seq2seq}, estendendo-a do problema de desempenho pontual para o problema de estabilidade temporal e adapta\c{c}\~ao ao drift.
 
 \begin{thebibliography}{9}
 
@@ -230,6 +281,12 @@ Kalman, R. E.: A New Approach to Linear Filtering and Prediction Problems. Journ
 
 \bibitem{adam}
 Kingma, D. P., Ba, J.: Adam: A Method for Stochastic Optimization. In: 3rd International Conference on Learning Representations (ICLR) (2015)
+
+\bibitem{kliep}
+Sugiyama, M., Nakajima, S., Kashima, H., von B\"unau, P., Kawanabe, M.: Direct importance estimation with model selection and its application to covariate shift adaptation. In: Advances in Neural Information Processing Systems (NIPS) (2008)
+
+\bibitem{sugiyama_book}
+Sugiyama, M., Kawanabe, M.: Machine Learning in Non-Stationary Environments: Introduction to Covariate Shift Adaptation. MIT Press (2012)
 
 \end{thebibliography}
 

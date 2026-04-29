@@ -38,7 +38,7 @@
 
 \title{\vspace{-1.5cm}Checkpoint --- An\'alise de Data Drift em Seq2Seq para
        Predi\c{c}\~ao de Trajet\'orias no RoboCup SSL}
-\author{Iniciação Científica --- Relatório de progresso (Mês 1 e Mês 2)}
+\author{Iniciação Científica --- Relatório de progresso (Meses 1--4)}
 \date{\today}
 
 \begin{document}
@@ -64,6 +64,18 @@ lat\^encia. O notebook unificado tem hoje 55 c\'elulas e produz 39 figuras
 em PT/EN al\'em de 12 CSVs de m\'etricas, todos versionados em
 \texttt{Relas/results/\{mes1,mes2\}/}.
 
+O M\^es~3 implementou adapta\c{c}\~ao ao drift por dois caminhos:
+(i)~importance weighting via LSIF, que decompõe o excesso de ADE em
+componentes covariate vs.\ concept drift; e (ii)~retreino seletivo
+nos breakpoints detectados pelo Pelt. Os resultados indicam que 59--72\,\%
+do excesso \'e covariate (feature dominante: \texttt{accel\_p99}), mas o
+fine-tuning induz \emph{catastrophic interference} severo
+(\texttt{cat\_ratio}\,=\,0{,}82 j\'a na 1\textordfeminine{} \'epoca). A
+valida\c{c}\~ao por divis\~ao confirmou que o drift \'e real e
+intra-divis\~ao (Divis\~ao\,B ausente nos dados). O M\^es~4 consolidou
+os resultados, aplicou a \'arvore de decis\~ao de cen\'ario e produziu
+este relat\'orio final com tese central (Cen\'ario~3 descritivo).
+
 % ============================================================================
 \section{Linha do tempo}
 % ============================================================================
@@ -83,6 +95,15 @@ em PT/EN al\'em de 12 CSVs de m\'etricas, todos versionados em
           \texttt{requirements.txt}, modelo configurado para target
           \texttt{dv} (delta-velocity), divis\~ao A/B mapeada via
           \texttt{division\_map.csv}. Pronto para o M\^es 3.
+    \item \textbf{M\^es 3 --- Adapta\c{c}\~ao ao drift.} Importance
+          weighting (LSIF) com decomposi\c{c}\~ao por feature;
+          retreino seletivo no breakpoint Pelt com early-stop por
+          \texttt{cat\_ratio}; valida\c{c}\~ao por divis\~ao SSL
+          (2021 mapeado como Both; Divis\~ao\,B ausente).
+    \item \textbf{M\^es 4 --- Consolida\c{c}\~ao e reda\c{c}\~ao.}
+          Re-execu\c{c}\~ao com $n_{\text{por ano}}=6$; decis\~ao da
+          tese central (Cen\'ario~3 descritivo); atualiza\c{c}\~ao
+          deste documento e do \texttt{main\_pt.tex}.
 \end{enumerate}
 
 % ============================================================================
@@ -406,30 +427,191 @@ ao \texttt{requirements.txt}.
 \end{itemize}
 
 % ============================================================================
-\section{Pr\'oximos passos --- M\^es 3}
+\section{M\^es 3 --- Adapta\c{c}\~ao ao drift}
 % ============================================================================
 
+\subsection{Importance weighting (LSIF)}
+
+O objetivo do M\^es~3 foi quantificar quanto do excesso de ADE \'e
+explic\'avel por \emph{covariate shift} (mudan\c{c}a na distribui\c{c}\~ao
+das entradas) em contraste com \emph{concept drift} (mudan\c{c}a em
+$p(y|x)$). O m\'etodo adotado foi LSIF (\emph{Least-Squares Importance
+Fitting}), que estima a raz\~ao de densidades
+$\hat{w}(x) = p_{\text{alvo}}(x) / p_{2019}(x)$ diretamente,
+sem estimar as densidades individuais~\cite{kliep,sugiyama_book}.
+As \emph{features} s\~ao os oito percentis cinem\'aticos por jogo
+(\texttt{speed/accel/turn} $\times$ \{mean, p90, p99\} menos
+\texttt{turn\_p99}).
+
+O ADE ponderado e a \emph{recovery} s\~ao definidos por:
+\begin{equation}
+\mathrm{ADE}_{\mathrm{IW}}(y) =
+    \frac{\displaystyle\sum_{i} \hat{w}(x_i)\,e_i}
+         {\displaystyle\sum_{i} \hat{w}(x_i)}, \qquad
+\mathrm{recovery}(y) =
+    \frac{\mathrm{ADE}_y - \mathrm{ADE}_{\mathrm{IW}}(y)}
+         {\mathrm{ADE}_y - \mathrm{ADE}_{2019}} \times 100\,\%.
+\label{eq:iw}
+\end{equation}
+Se o drift for puramente covariate, $\mathrm{ADE}_{\mathrm{IW}} \approx
+\mathrm{ADE}_{2019}$ e recovery $\approx 100\,\%$.
+O ESS ratio $\bigl[(\sum_i \hat{w}_i)^2 / (n \sum_i \hat{w}_i^2)\bigr]$
+mede a estabilidade do estimador IW.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{r r r r r r}
+\toprule
+\textbf{Ano} & \textbf{excess (mm)} & \textbf{ADE\textsubscript{IW} (mm)}
+             & \textbf{ESS} & \textbf{recovery (\%)} & \textbf{IC\,95\,\%} \\
+\midrule
+2021 & $+3{,}05$ & 5{,}70 & 0{,}58 & 61{,}6 & [60{,}1;\;63{,}1] \\
+2022 & $+0{,}23$ & 4{,}62 & 0{,}73 & 59{,}0 & [46{,}5;\;77{,}9] \\
+2023 & $+0{,}69$ & 4{,}72 & 0{,}72 & 71{,}8 & [66{,}9;\;77{,}4] \\
+2024 & $-0{,}03$ & ---     & 0{,}79 & ---    & --- \\
+2025 & $+0{,}73$ & 4{,}75 & 0{,}59 & 69{,}3 & [64{,}4;\;75{,}1] \\
+\bottomrule
+\end{tabular}
+\caption{Decomposi\c{c}\~ao IW ($n_{\text{source}} = n_{\text{target}}
+         = 48\,000$; \texttt{--n\_per\_year~6}). ESS\,$>$\,0{,}5 indica
+         estimador est\'avel. Ano 2024 exclu\'ido (sem excesso,
+         ADE$_{2024}$ $<$ ADE$_{2019}$). IC\,95\,\% via bootstrap
+         com 200 amostras.}
+\label{tab:iw_decomp}
+\end{table}
+
+\textbf{Decomposi\c{c}\~ao por feature.} Para identificar quais dimens\~oes
+dominam o covariate shift, o IW foi re-estimado usando cada feature
+individualmente (\texttt{--per\_feature}). Ranking m\'edio de
+recovery\_pct entre 2021, 2023 e 2025:
+(1)~\texttt{accel\_p99} $\approx 54\,\%$,
+(2)~\texttt{accel\_p90} $\approx 52\,\%$,
+(3)~\texttt{accel\_mean} $\approx 47\,\%$,
+(4--6)~features de velocidade ($20$--$40\,\%$),
+(7--8)~\texttt{turn\_\{mean,p90\}} ($<5\,\%$).
+O ranking estabiliza entre anos: acelera\c{c}\~ao de cauda
+(\texttt{accel\_p99}) \'e a dimens\~ao de covariate shift mais
+relevante para o modelo Seq2Seq.
+
+\subsection{Retreino seletivo}
+
+O Pelt (pen\,=\,5) detectou um breakpoint inter-ano: transi\c{c}\~ao
+2019+2021 $\to$ 2022--2025 (\texttt{antes\_2022}). O pipeline de
+fine-tuning: (i)~congela o encoder e as primeiras camadas do decoder;
+(ii)~descongela as 2 camadas finais; (iii)~Adam lr\,=\,$10^{-5}$,
+at\'e 20 \'epocas com early-stop em \texttt{cat\_ratio}\,$>$\,0{,}5.
+O \texttt{cat\_ratio} mede a raz\~ao trajet\'orias degradadas /
+melhoradas, capturando \emph{catastrophic interference}.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{l c c c r r r}
+\toprule
+\textbf{Breakpoint} & \textbf{n\_unfreeze} & \textbf{lr}
+    & \textbf{\'epocas} & \textbf{$\Delta$ADE (mm)}
+    & \textbf{recovery (\%)} & \textbf{cat\_ratio} \\
+\midrule
+\texttt{antes\_2022} & 2 & $10^{-5}$ & 1 (stop) & $-0{,}13$ & 32{,}7 & 0{,}82 \\
+\bottomrule
+\end{tabular}
+\caption{Resultados do retreino seletivo. Treino interrompido na 1\textordfeminine{} \'epoca
+         pois \texttt{cat\_ratio}\,=\,0{,}82\,$>$\,0{,}5 (limiar).}
+\label{tab:retrain}
+\end{table}
+
+O fine-tuning reduziu o ADE m\'edio em apenas $0{,}13$\,mm ($-2{,}7\,\%$),
+recovery\,=\,32{,}7\,\%. Para cada trajet\'oria melhorada, 0{,}82 foram
+pioradas, indicando que a adapta\c{c}\~ao da m\'edia vem \`a custa de
+degrada\c{c}\~ao severa em trajet\'orias individuais.
+
+% ============================================================================
+\section{Valida\c{c}\~ao por divis\~ao}
+% ============================================================================
+
+O script \texttt{division\_validation.py} mapeou cada
+\texttt{proc\_set} \`a sua divis\~ao via \texttt{division\_map.csv}.
+Resultado: todos os jogos p\'os-2021 pertencem \`a Divis\~ao\,A;
+a Divis\~ao\,B n\~ao est\'a representada. O ano 2021 foi classificado
+como \emph{Both} (formato h\'ibrido p\'os-pandemia).
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{l r r r r r}
+\toprule
+\textbf{Divis\~ao} & \textbf{Ano}
+    & \textbf{ADE\textsubscript{2019} (mm)} & \textbf{ADE\textsubscript{y} (mm)}
+    & \textbf{excess (mm)} & \textbf{jogos} \\
+\midrule
+Both & 2021 & ---  & 7{,}58 & ---       & 6 \\
+A    & 2022 & 4{,}53 & 4{,}75 & $+0{,}23$ & 6 \\
+A    & 2023 & 4{,}53 & 5{,}21 & $+0{,}69$ & 6 \\
+A    & 2024 & 4{,}53 & 4{,}50 & $-0{,}03$ & 6 \\
+A    & 2025 & 4{,}53 & 5{,}26 & $+0{,}73$ & 6 \\
+\bottomrule
+\end{tabular}
+\caption{Excesso de ADE por divis\~ao. Baseline: ADE$_{2019}$\,=\,4{,}53\,mm
+         (Divis\~ao\,A, 6 jogos, $n=6$).}
+\label{tab:division}
+\end{table}
+
+Como todos os dados p\'os-2021 s\~ao da Divis\~ao\,A, o excesso m\'edio
+($\approx 0{,}40$\,mm) n\~ao pode ser atribu\'ido \`a mudan\c{c}a de
+divis\~ao: o drift \'e real e intra-divis\~ao. A aus\^encia da
+Divis\~ao\,B impede comparar regimes competitivos distintos.
+
+% ============================================================================
+\section{An\'alise cr\'itica e tese central}
+% ============================================================================
+
+\subsection{\'Arvore de decis\~ao}
+
+A escolha do cen\'ario seguiu a \'arvore definida no plano do M\^es~4:
+
+\begin{itemize}[leftmargin=1.4em,itemsep=2pt]
+    \item \textbf{Cen\'ario~1} (``drift \'e confundimento de divis\~ao''):
+          requer $\Delta_A < 0{,}3$\,mm \emph{e} $\Delta_B > 1{,}5$\,mm.
+          \textbf{N\~ao se aplica:} $\Delta_A \approx 0{,}40$\,mm e
+          Divis\~ao\,B ausente.
+    \item \textbf{Cen\'ario~2} (``detectar \'e f\'acil, adaptar n\~ao''):
+          requer $\Delta_A > 0{,}5$\,mm \emph{e} recovery m\'ediana
+          $< 50\,\%$. \textbf{N\~ao se aplica:} $\Delta_A = 0{,}40$\,mm
+          e recovery m\'ediana $\approx 63\,\%$ (acima do limiar).
+    \item \textbf{Cen\'ario~3} (descritivo sem afirma\c{c}\~ao forte):
+          \textbf{escolhido por exclus\~ao.}
+\end{itemize}
+
+\subsection{Tese central --- Cen\'ario~3}
+
+O drift no Seq2Seq para trajet\'orias SSL \'e \textbf{real},
+\textbf{intra-divis\~ao} e \textbf{predominantemente covariate}:
+entre 59 e 72\,\% do excesso de ADE \'e explicado por mudan\c{c}a na
+distribui\c{c}\~ao das features cinem\'aticas (especialmente
+\texttt{accel\_p99}). Contudo, a adapta\c{c}\~ao por fine-tuning \'e
+severamente prejudicada por \emph{catastrophic interference}.
+
+\textbf{Suporte num\'erico:}
 \begin{enumerate}[leftmargin=1.6em,itemsep=2pt]
-    \item \textbf{Importance weighting.} Estimar
-          $w(x) = p_{\text{alvo}}(x) / p_{\text{2019}}(x)$ via KLIEP ou
-          RuLSIF~\cite{kliep,sugiyama_book} sobre as features
-          cinem\'aticas. Recalcular ADE ponderado em 2019 e comparar com
-          ADE n\~ao-ponderado em $y \neq 2019$. Se ficarem pr\'oximos,
-          o drift \'e mostly covariate e o problema \'e solu\c{c}ion\'avel
-          sem retreino.
-    \item \textbf{Retreino seletivo.} Usar os \emph{breakpoints} do
-          Pelt como pontos candidatos a re-treino. Para cada $t^*$:
-          treino = jogos antes; teste = jogos depois. \emph{Fine-tuning}
-          leve (camada final do Seq2Seq descongelada) e compara\c{c}\~ao
-          de ADE pr\'e/p\'os retreino.
-    \item \textbf{Decomposi\c{c}\~ao por feature.} Hoje a decomposi\c{c}\~ao
-          covariate vs concept usa apenas \texttt{ks\_speed}. Estender
-          para \texttt{ks\_accel} e combina\c{c}\~ao multivariada.
-    \item \textbf{Valida\c{c}\~ao por divis\~ao.} \texttt{division\_map.csv}
-          j\'a foi criado; \'e hora de cortar todas as an\'alises por
-          divis\~ao A vs B e ver quanto da varia\c{c}\~ao por ano \'e
-          confundida com varia\c{c}\~ao por divis\~ao.
+    \item $\Delta_A \approx 0{,}40$\,mm positivo e persistente em
+          2022--2025 (exceto 2024): drift real, n\~ao pontual.
+    \item Recovery m\'ediana $\approx 63\,\%$ (IC\,95: 59--72\,\%):
+          covariate shift explica a maior parte do excesso, mas
+          $\approx 37\,\%$ permanece ap\'os repondera\c{c}\~ao,
+          sugerindo algum concept drift residual.
+    \item \texttt{accel\_p99} \'e a feature mais informativa do
+          covariate shift (recovery individual\,$>$\,50\,\% em todos
+          os anos com excesso, ranking est\'avel entre anos).
+    \item Fine-tuning com 2 camadas descongeladas e lr\,=\,$10^{-5}$:
+          \texttt{cat\_ratio}\,=\,0{,}82, early-stop na 1\textordfeminine{} \'epoca;
+          o trade-off m\'edia--cauda \'e desfavor\'avel.
 \end{enumerate}
+
+\textbf{Limita\c{c}\~oes relevantes:} Divis\~ao\,B ausente; um \'unico
+breakpoint retreinado (Pelt detectou apenas a transic\~ao 2019+2021
+$\to$ 2022); fine-tuning testado apenas no decoder. Estas limita\c{c}\~oes
+s\~ao candidatas naturais para trabalho futuro.
 
 % ============================================================================
 \section*{Lista de artefatos atuais}
@@ -437,18 +619,28 @@ ao \texttt{requirements.txt}.
 
 \begin{itemize}[leftmargin=1.4em,itemsep=1pt,parsep=0pt]
     \item \textbf{Scripts}: \texttt{plot\_covariate\_shift.py},
-          \texttt{compute\_trajectory\_errors.py}.
-    \item \textbf{Notebook}: \texttt{drift\_analise.ipynb} (55 c\'elulas).
+          \texttt{compute\_trajectory\_errors.py},
+          \texttt{compute\_importance\_weights.py},
+          \texttt{plot\_iw\_results.py},
+          \texttt{retrain\_at\_breakpoints.py},
+          \texttt{division\_validation.py}.
+    \item \textbf{Notebook}: \texttt{drift\_analise.ipynb} ($\geq$60 c\'elulas).
     \item \textbf{Documenta\c{c}\~ao}: \texttt{Relas/PIPELINE.md},
           \texttt{Relas/CODEX\_CHECKLIST.md}, este arquivo
           (\texttt{Relas/checkpoint.tex}).
     \item \textbf{Configura\c{c}\~ao auxiliar}: \texttt{division\_map.csv},
-          \texttt{requirements.txt} (atualizado com \texttt{river},
-          \texttt{ruptures}).
+          \texttt{requirements.txt} (com \texttt{river}, \texttt{ruptures},
+          \texttt{scikit-learn}).
     \item \textbf{Sa\'idas M\^es 1}: 19 pares de PDF (PT/EN) e 3 CSVs em
           \texttt{Relas/results/mes1/}.
     \item \textbf{Sa\'idas M\^es 2}: 12 pares de PDF e 6 CSVs em
           \texttt{Relas/results/mes2/}.
+    \item \textbf{Sa\'idas M\^es 3}: \texttt{iw\_decomposition.csv},
+          \texttt{iw\_per\_feature.csv}, \texttt{retrain\_results.csv},
+          \texttt{retrain\_epoch\_log\_bp0.csv},
+          \texttt{by\_division\_decomposition.csv},
+          \texttt{sample\_size\_sensitivity.csv}, 3 PDF de IW e 1 PDF de
+          divis\~ao em \texttt{Relas/results/mes3/}.
 \end{itemize}
 
 % ============================================================================

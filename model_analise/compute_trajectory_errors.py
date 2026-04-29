@@ -98,8 +98,14 @@ def load_dataset_csv_mapping(csv_path):
     return mapping
 
 
-def sample_games(n_per_year=3, seed=42, exclude_proc=(1, 2)) -> List[int]:
-    """Retorna lista de proc_set_N amostrados (n por ano), excluindo baseline."""
+def sample_games(n_per_year=6, seed=42, exclude_proc=(1, 2),
+                 full_baseline=True, baseline_year=2019) -> List[int]:
+    """Retorna lista de proc_set_N amostrados (n por ano), excluindo treino.
+
+    Se ``full_baseline=True``, ``baseline_year`` (default 2019) recebe TODOS
+    os proc_sets disponiveis (sem amostragem). Reduz a instabilidade do ADE
+    de referencia observada no review do Mes 3.
+    """
     rng = np.random.default_rng(seed)
     by_year = {}
     for n, y in PROC_YEAR.items():
@@ -110,6 +116,9 @@ def sample_games(n_per_year=3, seed=42, exclude_proc=(1, 2)) -> List[int]:
     chosen = []
     for y in sorted(by_year):
         pool = sorted(by_year[y])
+        if full_baseline and y == baseline_year:
+            chosen.extend(pool)
+            continue
         k = min(n_per_year, len(pool))
         idx = rng.choice(len(pool), size=k, replace=False)
         chosen.extend([pool[i] for i in idx])
@@ -165,11 +174,16 @@ def per_traj_metrics(pos_pred, pos_true):
 # ----------------------- main -----------------------------------------------
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--n_per_year", type=int, default=3,
-                    help="Quantos jogos por ano amostrar (default 3)")
+    ap.add_argument("--n_per_year", type=int, default=6,
+                    help="Quantos jogos por ano amostrar (default 6)")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--max_windows_per_game", type=int, default=8000,
-                    help="Limite de janelas por jogo p/ não estourar memória")
+                    help="Limite de janelas por jogo p/ nao estourar memoria")
+    ap.add_argument("--no_full_baseline", action="store_true",
+                    help="Se setado, AMOSTRA tambem o baseline 2019. "
+                         "Default: usa todos os proc_sets de 2019.")
+    ap.add_argument("--baseline_year", type=int, default=2019,
+                    help="Ano de referencia (baseline) - default 2019.")
     args = ap.parse_args()
 
     os.makedirs(OUTDIR, exist_ok=True)
@@ -180,8 +194,14 @@ def main():
     tf.random.set_seed(args.seed)
 
     csv_map = load_dataset_csv_mapping(DATASET_CSV)
-    chosen = sample_games(n_per_year=args.n_per_year, seed=args.seed)
+    chosen = sample_games(
+        n_per_year=args.n_per_year, seed=args.seed,
+        full_baseline=not args.no_full_baseline,
+        baseline_year=args.baseline_year,
+    )
     print(f"[info] Jogos amostrados (proc_set N): {chosen}")
+    print(f"[info] full_baseline={not args.no_full_baseline}  "
+          f"baseline_year={args.baseline_year}  n_per_year={args.n_per_year}")
 
     rows = []
     rng = np.random.default_rng(args.seed)
