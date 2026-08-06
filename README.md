@@ -1,86 +1,77 @@
-# Trajectory Prediction
-This repository introduces an encoder-decoder sequence to sequence neural network to forecast trajectories.
-The neural network can be configured to a variable length input and predict a reasonable number of future time steps.
+# Data Drift em um Modelo Seq2Seq — Predição de Trajetórias na RoboCup SSL
 
-We utilized data from RoboCup SSL games to train the model. The inputs are a sequence of position, velocity and orientation 
-for each time step, like the following:
-```
-[x y v_x v_y psi]
-```
+Projeto de Iniciação Científica que investiga **data drift** em um modelo seq2seq (encoder–decoder) de predição de trajetórias de robôs, usando logs oficiais da RoboCup Small Size League de **2019 a 2025**. O trabalho cobre: degradação temporal do modelo, detecção formal de drift em stream (ADWIN, Page-Hinkley, KSWIN, Pelt), quantificação de covariate shift via importance weighting (LSIF) e estratégias de adaptação por fine-tuning seletivo.
 
-The network predicts a sequence of `[v_x v_y]`, which we integrate to find the
-robot's future trajectory. A representation of the neural network is depicted below:
+O modelo base (arquitetura, treino e dataset original) vem do repositório [LucasSte/trajectory-prediction](https://github.com/LucasSte/trajectory-prediction); este repositório o estende com o pipeline completo de análise de drift.
 
-![alt text](https://github.com/LucasSte/trajectory-prediction/raw/master/docs/Robot_overview_nn.png)
+📄 **Artigo e slides**: veja [`docs/`](docs/).
 
-We also analysed adding information about the ball, in an attempt to improve prediction. We conceived a ball encoder that
-processes a sequence of position and velocity for the ball and aggregates that into the prediction. A diagram containing the architecture to aggregate 
-information about the ball is available below:
+## Estrutura do repositório
 
-![alt text](https://github.com/LucasSte/trajectory-prediction/raw/master/docs/ball_encoder.png)
+| Pasta | Conteúdo |
+|---|---|
+| `common/` | Código compartilhado: bootstrap de paths, constantes (`PROC_YEAR`, janelas, configs de detectores), métricas, estilo de plots, utilitários de detecção |
+| `dataset/` | Download (`download_dataset.py`), leitura dos logs SSL (protobuf) e suavização Kalman (`process_dataset.py`) |
+| `model_analise/` | Arquitetura seq2seq (`ai_model/`), núcleo compartilhado (`core/`), treino, comparação e estratégias de adaptação (EWC, replay, targeted, retrain em breakpoints) |
+| `drift_analise/` | Pipeline de drift em 4 capítulos (`chapter01..04_*.py` + notebooks `01..04_*.ipynb`), fases de engenharia de detecção (`phase1..4`, `mes10_*`, `mes11_*`) e figuras do artigo (`paper_figs.py`) |
+| `Relas/` | Relatórios LaTeX (`checkpoint/`, `main_pt/`, `main_en/`, `Artigo SBR/`) e resultados gerados (`results/`) |
+| `docs/` | **Artigo final (`main_corrigido.pdf`) e slides PT/EN** |
+| `tests/` | Testes (pytest) |
 
-#### More information
+## Ambiente
 
-To find out more about the model's architecture, training and testing procedures, please check out
-my [graduation thesis](https://github.com/LucasSte/Research/blob/4c6dd15c91670505114df42b3bab0490a8bf1844/tese.pdf).
-
-### Environment
-
-The project targets **Python 3.12** (newer versions currently lack wheels for some pinned dependencies, e.g. `ruptures`).
+O projeto usa **Python 3.12** (versões mais novas ainda não têm wheels para algumas dependências pinadas, ex.: `ruptures`).
 
 ```
 python -m venv venv
-venv\Scripts\activate        # Windows (or: source venv/bin/activate)
+venv\Scripts\activate        # Windows (ou: source venv/bin/activate)
 pip install -r requirements.txt
-pip install -r requirements-dev.txt   # optional: pytest + nbstripout
+pip install -r requirements-dev.txt   # opcional: pytest + nbstripout
 ```
 
-Note: model weights (`weights/*.h5`), normalization stats (`model/*.pkl`), processed datasets (`dataset/proc_set_*`) and the `covariate_shift_out/` artefacts are not versioned — they are produced by the dataset preparation, training and `model_analise/compute_trajectory_errors.py` steps below. Precomputed figures and CSV results are available under `Relas/results/`.
+## Dados (RoboCup SSL)
 
-### Running the models
+Os 36 jogos usados (6 por ano: 2019, 2021–2025) vêm do acervo oficial de game logs da SSL, hospedado no Seafile da TIGERs Mannheim (link publicado em [ssl.robocup.org/collected-data](https://ssl.robocup.org/collected-data/)).
 
-#### Prepare the dataset
-1. Enter the `dataset` folder, by doing `cd dataset`.
-2. Run `download_dataset.sh`. This file downloads the dataset from RoboCup official logs repositories.
-3. Run `python3 process_dataset.py` to process the dataset and prepare it for training and testing.
+```
+python dataset/download_dataset.py --check   # verifica as 36 URLs (rápido)
+python dataset/download_dataset.py           # baixa tudo (~10 GB compactado)
+python dataset/download_dataset.py --year 2024   # ou só um ano
+python dataset/process_dataset.py            # data_set_N.log -> proc_set_N.pkl
+```
 
-#### Train the models
+O mapeamento jogo → ano está em `common/constants.py` (`PROC_YEAR`); as métricas por jogo, em `drift_analise/dataset/dataset.csv`. Os parâmetros calibrados do suavizador de Kalman (`dataset/*_series_params.pkl`) já estão versionados.
 
-From the root folder, run `python3 model_analise/train_models.py`. It will train three models.
-* Two models that consume only data about the robots.
-* Two models that consume data about tha ball and the robots.
-* A multilayer perceptron network.
+## Modelos
 
-Each model has been trained in two configurations:
-1. A look back window of 30 time steps and a prediction of 15 time steps.
-2. A look back window of 60 time steps and a prediction of 30 time steps.
+```
+python model_analise/train_models.py             # treina e salva pesos + stats de normalização
+python model_analise/compare.py                  # compara Seq2Seq / MLP / baseline Kalman
+python model_analise/compute_trajectory_errors.py  # gera covariate_shift_out/ (ADE/FDE por trajetória)
+```
 
-If you would like to visualize plots of batch error and validation error during training,
-uncomment the `plot` function in `model_analise/train_models.py`.
+O seq2seq consome janelas de `[x, y, v_x, v_y, psi]` e prediz `[v_x, v_y]`, integrados para obter a trajetória futura, em duas configurações: 30→15 e 60→30 passos. Detalhes da arquitetura no [repositório original](https://github.com/LucasSte/trajectory-prediction).
 
-#### Testing the models
+**Artefatos não versionados** (gerados pelos passos acima): pesos `weights/*.h5`, stats `model/*.pkl`, `dataset/proc_set_*` e `covariate_shift_out/`. Os resultados finais (figuras PT/EN e CSVs) já estão pré-computados em `Relas/results/`.
 
-Running `python3 model_analise/compare.py` will run the trained configurations in a testing set.
-It will calculate the mean average error, average displacement error and final displacement error and print them.
-It will also measure such metrics for a Kalman predictor, which serves as a reference for comparison.
+## Pipeline de análise de drift
 
-### Data Drift Analysis
+Quatro capítulos, cada um com script (`drift_analise/chapterNN_*.py`) e notebook (`drift_analise/NN_*.ipynb`) pareados; saídas em `Relas/results/drift/<capítulo>/`:
 
-This repository extends the original model with a full **data drift analysis pipeline** covering temporal degradation detection and covariate-shift adaptation across RoboCup SSL seasons (2019–2025).
+1. **Degradação e diagnóstico** — ADE/FDE por ano, features cinemáticas por jogo, covariate shift descritivo (KS, Wasserstein).
+2. **Detecção no stream** — ADWIN, Page-Hinkley e KSWIN online; calibração baseline-relative; decomposição do drift.
+3. **Covariate shift e explicação** — importance weighting LSIF/RuLSIF, decomposição covariate vs concept, validação por divisão.
+4. **Robustez e validação** — teste nulo por permutação, ARL, BOCPD, Pelt e sensibilidade a tamanho de amostra.
 
-The pipeline has four stages:
-1. **Granular infrastructure** (`model_analise/compute_trajectory_errors.py`, `drift_analise/chapter01_descriptive_pipeline.py` — covariate-shift tables and per-game kinematic features) — trajectory-level ADE/FDE.
-2. **Formal drift detection** (`drift_analise/02_deteccao_no_stream.ipynb`, `drift_analise/chapter02_deteccao_pipeline.py`) — ADWIN, Page-Hinkley, KSWIN online detectors and offline Pelt change-point detection with null-detector permutation test.
-3. **Covariate-shift quantification** (`drift_analise/chapter03_visuals.py` — `main_compute_importance_weights`) — LSIF importance weighting decomposes excess ADE into covariate vs concept drift; per-feature analysis ranks kinematic dimensions by explanatory power.
-4. **Selective retraining** (`model_analise/retrain_at_breakpoints.py`) — fine-tuning at Pelt breakpoints with early-stop on catastrophic-interference ratio.
+A engenharia de detecção que sustenta o capítulo 2 está em `phase1..4_*.py` (suavizadores → grid de 174 configs → ensembles → consolidação) e nas validações `mes10_*` (latência, independência) e `mes11_*` (holdout out-of-sample, master table final). As estratégias de adaptação (EWC, replay, targeted fine-tuning) estão em `model_analise/*_finetune.py`, com resultados em `Relas/results/mes7*/`.
 
-All generated figures (PT/EN) and CSV artefacts are under `Relas/results/drift/<chapter>/`, organized by the same chapters as the notebooks `drift_analise/01..04_*.ipynb`.
+## Testes
 
-### Project layout
+```
+python -m pytest tests/ -q
+```
 
-The workspace is organized by responsibility:
+## Créditos
 
-* `weights/`: model weight files (`*.h5`).
-* `model_analise/`: model architecture, training, comparison, debugging, and result extraction scripts.
-* `drift_analise/`: drift-analysis notebooks and drift-specific scripts.
-* `Relas/`: report material, pipeline documentation, and generated report outputs.
+- Modelo seq2seq original: [Lucas Steuernagel](https://github.com/LucasSte/trajectory-prediction)
+- Game logs: [RoboCup Small Size League](https://ssl.robocup.org/) / acervo mantido pela TIGERs Mannheim
