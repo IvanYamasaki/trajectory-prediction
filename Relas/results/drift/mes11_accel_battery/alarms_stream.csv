@@ -1,0 +1,146 @@
+fold,detector,idx,year
+A,ADE (erro do modelo),10306,2019
+A,ADE (erro do modelo),31432,2021
+A,ADE (erro do modelo),32839,2021
+A,ADE (erro do modelo),38528,2021
+A,ADE (erro do modelo),41760,2021
+A,ADE (erro do modelo),42261,2021
+A,ADE (erro do modelo),45739,2021
+A,ADE (erro do modelo),55994,2022
+A,ADE (erro do modelo),68316,2023
+A,ADE (erro do modelo),70588,2023
+A,ADE (erro do modelo),99564,2024
+A,ADE (erro do modelo),119806,2025
+A,accel_p95,308,2019
+A,accel_p95,1298,2019
+A,accel_p95,2419,2019
+A,accel_p95,4090,2019
+A,accel_p95,4468,2019
+A,accel_p95,5781,2019
+A,accel_p95,10745,2019
+A,accel_p95,32638,2021
+A,accel_p95,32839,2021
+A,accel_p95,33156,2021
+A,accel_p95,34731,2021
+A,accel_p95,34932,2021
+A,accel_p95,35133,2021
+A,accel_p95,35382,2021
+A,accel_p95,35634,2021
+A,accel_p95,35836,2021
+A,accel_p95,36082,2021
+A,accel_p95,36644,2021
+A,accel_p95,36936,2021
+A,accel_p95,37280,2021
+A,accel_p95,37760,2021
+A,accel_p95,39067,2021
+A,accel_p95,39268,2021
+A,accel_p95,39590,2021
+A,accel_p95,39791,2021
+A,accel_p95,40895,2021
+A,accel_p95,44271,2021
+A,accel_p95,49349,2022
+A,accel_p95,55137,2022
+A,accel_p95,56256,2022
+A,accel_p95,56804,2022
+A,accel_p95,60703,2022
+A,accel_p95,65010,2023
+A,accel_p95,69050,2023
+A,accel_p95,69762,2023
+A,accel_p95,69992,2023
+A,accel_p95,70193,2023
+A,accel_p95,70433,2023
+A,accel_p95,70874,2023
+A,accel_p95,76616,2023
+A,accel_p95,78787,2023
+A,accel_p95,84304,2023
+A,accel_p95,96795,2024
+A,accel_p95,99136,2024
+A,accel_p95,99622,2024
+A,accel_p95,101034,2024
+A,accel_p95,103637,2024
+A,accel_p95,104200,2024
+A,accel_p95,104401,2024
+A,accel_p95,113259,2025
+A,accel_p95,114288,2025
+A,accel_p95,114489,2025
+A,accel_p95,114867,2025
+A,accel_p95,116459,2025
+A,accel_p95,117562,2025
+A,"AND(ADE, accel_p95)",32839,2021
+A,"AND(ADE, accel_p95)",70588,2023
+A,"AND(ADE, accel_p95)",99622,2024
+B,ADE (erro do modelo),1052,2019
+B,ADE (erro do modelo),10774,2019
+B,ADE (erro do modelo),11739,2019
+B,ADE (erro do modelo),26707,2021
+B,ADE (erro do modelo),32707,2021
+B,ADE (erro do modelo),34331,2021
+B,ADE (erro do modelo),42529,2021
+B,ADE (erro do modelo),42730,2021
+B,ADE (erro do modelo),50588,2022
+B,ADE (erro do modelo),89262,2023
+B,ADE (erro do modelo),94530,2023
+B,ADE (erro do modelo),94881,2023
+B,ADE (erro do modelo),95558,2023
+B,ADE (erro do modelo),99674,2023
+B,ADE (erro do modelo),102242,2023
+B,ADE (erro do modelo),111468,2024
+B,accel_p95,6786,2019
+B,accel_p95,8761,2019
+B,accel_p95,9625,2019
+B,accel_p95,11463,2019
+B,accel_p95,13502,2019
+B,accel_p95,14822,2019
+B,accel_p95,25041,2021
+B,accel_p95,28552,2021
+B,accel_p95,28822,2021
+B,accel_p95,33853,2021
+B,accel_p95,34385,2021
+B,accel_p95,34907,2021
+B,accel_p95,35108,2021
+B,accel_p95,35309,2021
+B,accel_p95,35705,2021
+B,accel_p95,36025,2021
+B,accel_p95,40151,2021
+B,accel_p95,40955,2021
+B,accel_p95,44895,2021
+B,accel_p95,49009,2022
+B,accel_p95,49210,2022
+B,accel_p95,51943,2022
+B,accel_p95,52876,2022
+B,accel_p95,64027,2022
+B,accel_p95,68962,2022
+B,accel_p95,82603,2023
+B,accel_p95,89922,2023
+B,accel_p95,92402,2023
+B,accel_p95,94193,2023
+B,accel_p95,95873,2023
+B,accel_p95,96099,2023
+B,accel_p95,96300,2023
+B,accel_p95,96501,2023
+B,accel_p95,96797,2023
+B,accel_p95,97131,2023
+B,accel_p95,97546,2023
+B,accel_p95,97781,2023
+B,accel_p95,98218,2023
+B,accel_p95,100580,2023
+B,accel_p95,100781,2023
+B,accel_p95,101094,2023
+B,accel_p95,101335,2023
+B,accel_p95,101704,2023
+B,accel_p95,101945,2023
+B,accel_p95,102245,2023
+B,accel_p95,102786,2023
+B,accel_p95,103007,2023
+B,accel_p95,103324,2023
+B,accel_p95,103605,2023
+B,accel_p95,111674,2024
+B,accel_p95,112054,2024
+B,accel_p95,112255,2024
+B,accel_p95,117348,2024
+B,accel_p95,128841,2025
+B,accel_p95,130022,2025
+B,accel_p95,131887,2025
+B,accel_p95,133302,2025
+B,"AND(ADE, accel_p95)",34385,2021
+B,"AND(ADE, accel_p95)",102245,2023

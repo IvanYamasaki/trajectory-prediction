@@ -1,0 +1,4 @@
+ewc_lambda,n_unfreeze,lr,epochs,ade_before_base,ade_after_base,ade_before_test,ade_after_test,cat_ratio,recovery_pct,final_loss
+0.0,2,1e-05,5,6.0545,5.7774,4.9374,4.6284,0.4287,-27.7,0.000515
+50.0,2,1e-05,5,6.0545,5.7839,4.9374,4.6341,0.4302,-27.2,0.000515
+500.0,2,1e-05,5,6.0545,5.7731,4.9374,4.626,0.4274,-27.9,0.000515

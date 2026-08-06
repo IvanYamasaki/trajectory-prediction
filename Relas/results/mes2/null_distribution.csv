@@ -1,5 +1,0 @@
-method,n_alarmes_observados,null_mean,null_p50,null_p95,p_value
-ADWIN_seq2seq,72,72.0,72.0,72.0,1.0
-PH_seq2seq,72,72.0,72.0,72.0,1.0
-ADWIN_kalman,72,72.0,72.0,72.0,1.0
-PH_kalman,72,72.0,72.0,72.0,1.0

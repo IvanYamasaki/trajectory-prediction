@@ -1,0 +1,5 @@
+method,n_alarmes_observados,null_mean,null_p50,null_p95,p_value,adwin_delta,ph_threshold,n_perms
+ADWIN_seq2seq,0,0.0,0.0,0.0,1.0,0.002,5.0,200
+PH_seq2seq,2,1.85,2.0,3.0,0.735,0.002,5.0,200
+ADWIN_kalman,0,0.0,0.0,0.0,1.0,0.002,5.0,200
+PH_kalman,6,6.89,7.0,8.0,0.95,0.002,5.0,200

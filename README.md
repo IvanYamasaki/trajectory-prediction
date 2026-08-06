@@ -57,12 +57,12 @@ It will also measure such metrics for a Kalman predictor, which serves as a refe
 This repository extends the original model with a full **data drift analysis pipeline** covering temporal degradation detection and covariate-shift adaptation across RoboCup SSL seasons (2019–2025).
 
 The pipeline has four stages:
-1. **Granular infrastructure** (`model_analise/compute_trajectory_errors.py`, `drift_analise/plot_covariate_shift.py`) — per-game kinematic features and trajectory-level ADE/FDE.
-2. **Formal drift detection** (`drift_analise/drift_analise.ipynb`) — ADWIN, Page-Hinkley, KSWIN online detectors and offline Pelt change-point detection with null-detector permutation test.
-3. **Covariate-shift quantification** (`drift_analise/compute_importance_weights.py`) — LSIF importance weighting decomposes excess ADE into covariate vs concept drift; per-feature analysis ranks kinematic dimensions by explanatory power.
+1. **Granular infrastructure** (`model_analise/compute_trajectory_errors.py`, `drift_analise/chapter01_descriptive_pipeline.py` — covariate-shift tables and per-game kinematic features) — trajectory-level ADE/FDE.
+2. **Formal drift detection** (`drift_analise/drift_analise.ipynb`, `drift_analise/chapter02_deteccao_pipeline.py`) — ADWIN, Page-Hinkley, KSWIN online detectors and offline Pelt change-point detection with null-detector permutation test.
+3. **Covariate-shift quantification** (`drift_analise/chapter03_visuals.py` — `main_compute_importance_weights`) — LSIF importance weighting decomposes excess ADE into covariate vs concept drift; per-feature analysis ranks kinematic dimensions by explanatory power.
 4. **Selective retraining** (`model_analise/retrain_at_breakpoints.py`) — fine-tuning at Pelt breakpoints with early-stop on catastrophic-interference ratio.
 
-All generated figures (PT/EN) and CSV artefacts are in `Relas/results/{mes1,mes2,mes3}/`. For the full data dictionary and reproduction steps see [`Relas/PIPELINE.md`](Relas/PIPELINE.md).
+All generated figures (PT/EN) and CSV artefacts are under `Relas/results/drift/<chapter>/`. For the full data dictionary and reproduction steps see [`Relas/PIPELINE.md`](Relas/PIPELINE.md).
 
 ### Project layout
 

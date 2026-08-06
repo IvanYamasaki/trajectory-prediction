@@ -1,0 +1,6 @@
+year,lsif_variant,ade_y,ade_y_ci_lo,ade_y_ci_hi,ade_2019,ade_iw,ade_iw_ci_lo,ade_iw_ci_hi,ess_ratio,ess_stable,ess_regime,recovery_pct,recovery_ci_lo,recovery_ci_hi,recovery_ci_lo_block,recovery_ci_hi_block,iw_corr_mm,iw_corr_mm_ci_lo_block,iw_corr_mm_ci_hi_block,recovery_ci_lo_block_fixed,recovery_ci_hi_block_fixed,recovery_raw,overshoot,recovery_note,excess_total,n_source,n_target
+2021,rulisf,7.5812,7.4822,7.6938,4.5277,6.8647,6.8121,6.9178,0.9365,True,stable,23.46,22.05,25.41,16.61,33.16,0.7165,0.4717,0.8604,15.45,28.18,23.46,False,ok,3.0535,48000,48000
+2022,rulisf,4.7528,4.7259,4.7812,4.5277,4.7191,4.6921,4.7478,0.9929,True,stable,14.99,12.35,19.1,2.89,164.24,0.0337,0.0264,0.045,11.73,19.99,14.99,False,ok,0.2251,48000,48000
+2023,rulisf,5.2133,5.1821,5.2446,4.5277,5.1502,5.1195,5.1804,0.993,True,stable,9.2,8.55,9.96,3.99,43.02,0.0631,0.0379,0.101,5.53,14.73,9.2,False,ok,0.6856,48000,48000
+2024,rulisf,4.501,4.4709,4.5324,4.5277,4.4612,4.4321,4.4909,0.9961,True,stable,,,,,,0.0398,,,,,,False,no_excess,-0.0266,48000,48000
+2025,rulisf,5.2569,5.2268,5.2867,4.5277,5.1902,5.1607,5.218,0.9918,True,stable,9.15,8.36,10.18,5.77,30.58,0.0667,0.0573,0.074,7.85,10.14,9.15,False,ok,0.7292,48000,48000

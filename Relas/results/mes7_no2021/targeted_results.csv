@@ -1,0 +1,4 @@
+variant,ess_replay_iw,n_new,n_replay,n_unfreeze,lr,epochs,ade_before_base,ade_after_base,ade_before_test,ade_after_test,cat_ratio,recovery_pct
+replay_iw,0.7147,12000,6000,2,1e-05,5,4.5843,4.4043,4.9649,4.7609,0.417,53.6
+target_accel,0.7147,6000,0,2,1e-05,5,4.5843,4.5256,4.9649,4.8114,0.4673,40.3
+target_accel+replay_iw,0.7147,6000,3000,2,1e-05,5,4.5843,4.4412,4.9649,4.7997,0.4487,43.4

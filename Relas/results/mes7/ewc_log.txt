@@ -1,0 +1,72 @@
+[info] TF 2.17.0
+[info] BP year=2022: 12 train proc_sets, 24 test proc_sets
+[info] baseline (2019): 6,000 traj | test (post-2022): 12,000 traj
+
+============================================================
+[run] EWC lambda=0.0  lr=1e-05  n_unfreeze=2
+  [freeze] n_unfreeze=2, trainable params=263,682
+  ADE before: base=6.2526  test=4.9649
+  Computing Fisher diagonal on baseline data...
+  [fisher] 263,682 params, mean diag Fisher=0.000000
+  Training with EWC lambda=0.0...
+    epoch 1/5  loss=0.000556
+    epoch 2/5  loss=0.000548
+    epoch 3/5  loss=0.000543
+      epoch 4/5  loss=0.000518
+    epoch 5/5  loss=0.000515
+
+  Results:
+    ADE baseline: 6.0545 -> 5.7857 (delta=-0.2687)
+    ADE test:     4.9374 -> 4.6316 (delta=-0.3058)
+    cat_ratio:    0.425 (target < 0.5; naive FT Mes3 = 0.82)
+    recovery_pct: -27.4%
+  [ok] weights -> weights\robot_30_15_ewc_lam0.weights.h5
+
+============================================================
+[run] EWC lambda=50.0  lr=1e-05  n_unfreeze=2
+  [freeze] n_unfreeze=2, trainable params=263,682
+  ADE before: base=6.0545  test=4.9374
+  Computing Fisher diagonal on baseline data...
+  [fisher] 263,682 params, mean diag Fisher=0.000000
+  Training with EWC lambda=50.0...
+    epoch 1/5  loss=0.000541
+    epoch 2/5  loss=0.000529
+    epoch 3/5  loss=0.000523
+    epoch 4/5  loss=0.000518
+    epoch 5/5  loss=0.000515
+
+  Results:
+    ADE baseline: 6.0545 -> 5.7839 (delta=-0.2706)
+    ADE test:     4.9374 -> 4.6341 (delta=-0.3034)
+    cat_ratio:    0.430 (target < 0.5; naive FT Mes3 = 0.82)
+    recovery_pct: -27.2%
+  [ok] weights -> weights\robot_30_15_ewc_lam50.weights.h5
+
+============================================================
+[run] EWC lambda=500.0  lr=1e-05  n_unfreeze=2
+  [freeze] n_unfreeze=2, trainable params=263,682
+  ADE before: base=6.0545  test=4.9374
+  Computing Fisher diagonal on baseline data...
+  [fisher] 263,682 params, mean diag Fisher=0.000000
+  Training with EWC lambda=500.0...
+    epoch 1/5  loss=0.000541
+    epoch 2/5  loss=0.000529
+    epoch 3/5  loss=0.000523
+    epoch 4/5  loss=0.000518
+    epoch 5/5  loss=0.000515
+
+  Results:
+    ADE baseline: 6.0545 -> 5.7731 (delta=-0.2814)
+    ADE test:     4.9374 -> 4.6260 (delta=-0.3115)
+    cat_ratio:    0.427 (target < 0.5; naive FT Mes3 = 0.82)
+    recovery_pct: -27.9%
+  [ok] weights -> weights\robot_30_15_ewc_lam500.weights.h5
+
+[ok] Relas\results\mes7\ewc_results.csv
+ ewc_lambda  ade_after_base  ade_after_test  cat_ratio  recovery_pct
+        0.0          5.7774          4.6284     0.4287         -27.7
+       50.0          5.7839          4.6341     0.4302         -27.2
+      500.0          5.7731          4.6260     0.4274         -27.9
+
+*** Best EWC lambda=500.0: cat_ratio=0.427 vs naive FT 0.82 ***
+[CRITERIO ATINGIDO] cat_ratio < 0.5 com EWC

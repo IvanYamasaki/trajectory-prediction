@@ -1,5 +1,0 @@
-year,n_games_full,n_games_compat,ade_baseline_2019,ade_full,ade_compat,excess_total_mm,excess_concept_mm,excess_covariate_mm,pct_explained_by_concept
-2022,6,0,3.911,4.53,,0.618,,,
-2023,6,2,3.911,5.018,4.875,1.107,0.964,0.143,87.1
-2024,6,0,3.911,4.334,,0.422,,,
-2025,6,0,3.911,5.0,,1.089,,,

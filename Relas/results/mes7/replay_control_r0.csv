@@ -1,0 +1,2 @@
+replay_ratio,n_replay,n_unfreeze,lr,epochs,ade_before_base,ade_after_base,ade_before_test,ade_after_test,cat_ratio,recovery_pct
+0.0,0,2,1e-05,5,6.2526,6.0847,4.9649,4.7572,0.436,-16.1

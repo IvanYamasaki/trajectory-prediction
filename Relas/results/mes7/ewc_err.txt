@@ -1,0 +1,2 @@
+C:\Users\ivang\Desktop\trajectory-prediction\.venv312\Lib\site-packages\keras\src\saving\saving_lib.py:801: UserWarning: Skipping variable loading for optimizer 'adam', because it has 2 variables whereas the saved optimizer has 40 variables. 
+  saveable.load_own_variables(weights_store.get(inner_path))

@@ -1,0 +1,5 @@
+model,variant,delta,min_window,cooldown,max_window,n_alarms,n_alarms_post,FAR_2019_per1k,year_coverage,runtime_s,n_2019,n_2021,n_2022,n_2023,n_2024,n_2025
+Seq2Seq,lite,0.0000,600,200,2000,25,23,0.0417,5,71.1700,2,11,1,5,4,2
+Seq2Seq,exact,0.0000,600,200,2000,62,53,0.1875,5,5.1500,9,11,9,16,14,3
+Kalman,lite,0.0000,200,1000,5000,50,45,0.1042,5,101.9200,5,14,11,10,9,1
+Kalman,exact,0.0000,200,1000,5000,65,55,0.2083,5,1.9600,10,10,8,17,14,6

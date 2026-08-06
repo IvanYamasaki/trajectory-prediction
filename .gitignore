@@ -43,3 +43,6 @@ setup_openreview_mcp.*
 /*.pdf
 /drift_analise.ipynb
 *_backup.csv
+
+# artefato computado grande demais para o GitHub (regeneravel via mes11_accel_battery)
+Relas/results/drift/mes11_accel_battery/features_ext.parquet

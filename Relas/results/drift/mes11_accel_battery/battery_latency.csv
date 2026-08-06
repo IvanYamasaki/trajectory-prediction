@@ -1,0 +1,71 @@
+fold,detector,year,delay_trajs,delay_games,delay_pct_year,n_alarms_year
+A,ADE (erro do modelo),2021,7432,0.93,31.0,6
+A,ADE (erro do modelo),2022,7994,1.0,50.0,1
+A,ADE (erro do modelo),2023,4316,0.54,18.0,2
+A,ADE (erro do modelo),2024,11564,1.45,48.2,1
+A,ADE (erro do modelo),2025,7806,0.98,48.8,1
+A,accel_p95,2021,8638,1.08,36.0,20
+A,accel_p95,2022,1349,0.17,8.4,5
+A,accel_p95,2023,1010,0.13,4.2,10
+A,accel_p95,2024,8795,1.1,36.6,7
+A,accel_p95,2025,1259,0.16,7.9,6
+A,accel_mean,2021,8824,1.1,36.8,10
+A,accel_mean,2022,5249,0.66,32.8,2
+A,accel_mean,2023,996,0.12,4.2,7
+A,accel_mean,2024,4289,0.54,17.9,7
+A,accel_mean,2025,440,0.06,2.8,5
+A,speed_p95,2021,430,0.05,1.8,10
+A,speed_p95,2022,5256,0.66,32.9,5
+A,speed_p95,2023,1435,0.18,6.0,9
+A,speed_p95,2024,9472,1.18,39.5,8
+A,speed_p95,2025,2287,0.29,14.3,7
+A,speed_mean,2021,688,0.09,2.9,11
+A,speed_mean,2022,2814,0.35,17.6,6
+A,speed_mean,2023,1383,0.17,5.8,10
+A,speed_mean,2024,8677,1.08,36.2,9
+A,speed_mean,2025,1037,0.13,6.5,9
+A,"AND(ADE, accel_p95)",2021,8839,1.1,36.8,1
+A,"AND(ADE, accel_p95)",2022,-1,,,0
+A,"AND(ADE, accel_p95)",2023,6588,0.82,27.4,1
+A,"AND(ADE, accel_p95)",2024,11622,1.45,48.4,1
+A,"AND(ADE, accel_p95)",2025,-1,,,0
+A,"OR(ADE, accel_p95)",2021,7432,0.93,31.0,25
+A,"OR(ADE, accel_p95)",2022,1349,0.17,8.4,6
+A,"OR(ADE, accel_p95)",2023,1010,0.13,4.2,12
+A,"OR(ADE, accel_p95)",2024,8795,1.1,36.6,8
+A,"OR(ADE, accel_p95)",2025,1259,0.16,7.9,7
+B,ADE (erro do modelo),2021,2707,0.34,11.3,5
+B,ADE (erro do modelo),2022,2588,0.24,8.1,1
+B,ADE (erro do modelo),2023,9262,1.16,38.6,6
+B,ADE (erro do modelo),2024,7468,0.93,31.1,1
+B,ADE (erro do modelo),2025,-1,,,0
+B,accel_p95,2021,1041,0.13,4.3,13
+B,accel_p95,2022,1009,0.09,3.2,6
+B,accel_p95,2023,2603,0.33,10.8,24
+B,accel_p95,2024,7674,0.96,32.0,4
+B,accel_p95,2025,841,0.08,2.6,4
+B,accel_mean,2021,501,0.06,2.1,12
+B,accel_mean,2022,1301,0.12,4.1,4
+B,accel_mean,2023,9923,1.24,41.3,27
+B,accel_mean,2024,1509,0.19,6.3,10
+B,accel_mean,2025,421,0.04,1.3,2
+B,speed_p95,2021,399,0.05,1.7,8
+B,speed_p95,2022,388,0.04,1.2,8
+B,speed_p95,2023,5428,0.68,22.6,13
+B,speed_p95,2024,1443,0.18,6.0,14
+B,speed_p95,2025,1652,0.15,5.2,5
+B,speed_mean,2021,681,0.09,2.8,14
+B,speed_mean,2022,390,0.04,1.2,17
+B,speed_mean,2023,1426,0.18,5.9,29
+B,speed_mean,2024,2197,0.27,9.2,16
+B,speed_mean,2025,5113,0.48,16.0,5
+B,"AND(ADE, accel_p95)",2021,10385,1.3,43.3,1
+B,"AND(ADE, accel_p95)",2022,-1,,,0
+B,"AND(ADE, accel_p95)",2023,22245,2.78,92.7,1
+B,"AND(ADE, accel_p95)",2024,-1,,,0
+B,"AND(ADE, accel_p95)",2025,-1,,,0
+B,"OR(ADE, accel_p95)",2021,1041,0.13,4.3,18
+B,"OR(ADE, accel_p95)",2022,1009,0.09,3.2,7
+B,"OR(ADE, accel_p95)",2023,2603,0.33,10.8,30
+B,"OR(ADE, accel_p95)",2024,7468,0.93,31.1,5
+B,"OR(ADE, accel_p95)",2025,841,0.08,2.6,4

@@ -1,0 +1,10 @@
+W_coincidence,n_confirmed,FAR_2019_per1k,year_coverage_confirmed,W_approx_months,n_2019,n_2021,n_2022,n_2023,n_2024,n_2025,note
+50,0,0.0,0,0.0,0,0,0,0,0,0,Δ_min=534 > W=50: sem coincidências
+100,0,0.0,0,0.0,0,0,0,0,0,0,Δ_min=534 > W=100: sem coincidências
+200,0,0.0,0,0.1,0,0,0,0,0,0,Δ_min=534 > W=200: sem coincidências
+500,0,0.0,0,0.1,0,0,0,0,0,0,Δ_min=534 > W=500: sem coincidências
+1000,2,0.0,1,0.2,0,2,0,0,0,0,year_coverage_confirmed=1 (só 2021) — PH_agg nunca dispara em 2022-2025
+2000,3,0.0,1,0.5,0,3,0,0,0,0,year_coverage_confirmed=1 (só 2021) — PH_agg nunca dispara em 2022-2025
+5000,3,0.0,1,1.2,0,3,0,0,0,0,year_coverage_confirmed=1 (só 2021) — PH_agg nunca dispara em 2022-2025
+10000,5,0.0,2,2.5,0,4,1,0,0,0,year_coverage_confirmed=2 via pairing cross-ano: ADWIN early-2022 dentro de W=10000 (~2.5 meses) do ultimo PH late-2021 — W operacionalmente absurdo
+20000,5,0.0,2,5.0,0,4,1,0,0,0,year_coverage_confirmed=2 via pairing cross-ano: ADWIN early-2022 dentro de W=20000 (~5.0 meses) do ultimo PH late-2021 — W operacionalmente absurdo
