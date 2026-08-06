@@ -1,0 +1,103 @@
+\relax 
+\providecommand \babel@aux [2]{\global \let \babel@toc \@gobbletwo }
+\@nameuse{bbl@beforestart}
+\citation{kalman}
+\citation{seq2seq}
+\babel@aux{english}{}
+\@writefile{toc}{\contentsline {title}{Data Drift in a Seq2Seq Model for Robot Trajectory Prediction in the RoboCup SSL}{1}{}\protected@file@percent }
+\@writefile{toc}{\authcount {3}}
+\@writefile{toc}{\contentsline {author}{Ivan G. Yamasaki \and Marcos R. O. A. M\'aximo \and Paulo M. Tasinaffo}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{}\protected@file@percent }
+\newlabel{sec:intro}{{1}{1}{}{section.1}{}}
+\citation{seq2seq}
+\citation{alahi2016}
+\citation{salzmann2020}
+\citation{yuan2021}
+\citation{gu2022}
+\citation{seq2seq}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Related Work}{2}{}\protected@file@percent }
+\newlabel{sec:related}{{2}{2}{}{section.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{Trajectory prediction.}{2}{}\protected@file@percent }
+\citation{gama2014}
+\citation{adwin}
+\citation{page_hinkley}
+\citation{kswin}
+\citation{lu2019}
+\citation{kirkpatrick2017}
+\citation{kliep}
+\citation{kanamori2009,sugiyama_book}
+\citation{yamada2013}
+\citation{lopezpaz2017}
+\@writefile{toc}{\contentsline {paragraph}{Data drift and its detection.}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Covariate shift.}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Data and Model}{3}{}\protected@file@percent }
+\newlabel{sec:method}{{3}{3}{}{section.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{Data.}{3}{}\protected@file@percent }
+\citation{seq2seq}
+\citation{bahdanau}
+\citation{adam}
+\citation{kalman}
+\@writefile{toc}{\contentsline {paragraph}{Model and benchmark.}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Metric.}{4}{}\protected@file@percent }
+\newlabel{eq:ade}{{1}{4}{}{equation.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Temporal Degradation}{4}{}\protected@file@percent }
+\newlabel{sec:degradation}{{4}{4}{}{section.4}{}}
+\@writefile{toc}{\contentsline {paragraph}{The seq2seq model degrades outside its training distribution.}{4}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Temporal degradation (color = model, line style = horizon). (a) Mean ADE per year. (b) Percentage increase in ADE relative to 2019. (c) $\mathrm  {p99}/\mathrm  {p50}$ ratio of the per-trajectory ADE: the 2021 jump is a tail effect ($4.36 \to 4.94$), whereas in 2022--2025 the ratio falls below baseline while the median rises by about 25\,\%.}}{5}{}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{fig:degradation}{{1}{5}{}{figure.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{The Kalman-filter baseline degrades more.}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{The new regime enters through the tail, then spreads.}{5}{}\protected@file@percent }
+\citation{gama2014}
+\citation{kliep,kanamori2009,sugiyama_book}
+\citation{sugiyama_book}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Kinematic drift. (a) Kolmogorov--Smirnov statistic per year against the 2019 baseline (lines: annual mean; dots: individual matches); higher means a larger discrepancy between that year's distribution and 2019's. (b) Wasserstein distance indexed to the 2019 level, read the same way. (c) Mean ADE per match against the match's \texttt  {accel\_p99}, with a regression line and a 95\,\% bootstrap band.}}{6}{}\protected@file@percent }
+\newlabel{fig:kinematic}{{2}{6}{}{figure.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}How Much of It Is Covariate Shift?}{6}{}\protected@file@percent }
+\newlabel{sec:iw}{{5}{6}{}{section.5}{}}
+\newlabel{eq:lsif}{{2}{6}{}{equation.2}{}}
+\newlabel{eq:recovery}{{3}{6}{}{equation.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Importance-weighting decomposition (LSIF) with block bootstrap by match ($n_{\text  {boot}} = 2000$, 6 blocks per year). Baseline $\mathrm  {ADE}_{2019} = 4.53$\,mm; corr.\ $= \mathrm  {ADE}_y - \mathrm  {ADE}_{\mathrm  {IW}}$. 2024 has negative excess and is excluded from the recovery column. All classifier tests give $p < 10^{-3}$ by permutation. $^{\dagger }$2022 has a small excess (0.23\,mm), so the percentage should be read with care.}}{7}{}\protected@file@percent }
+\newlabel{tab:iw}{{1}{7}{}{table.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{Robustness.}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Reading.}{7}{}\protected@file@percent }
+\citation{kirkpatrick2017}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Marginal recovery per feature (LSIF refitted on one feature at a time), for the three seasons with a significant excess.}}{8}{}\protected@file@percent }
+\newlabel{tab:iwfeat}{{2}{8}{}{table.2}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Adaptation strategies under the common conservative protocol. The unadapted model scores 4.584\,mm on the old regime and 4.965\,mm on the new data. EWC reports the median of the $\lambda \in [50;\,10^7]$ plateau. The last three rows are driven by the covariate diagnosis.}}{8}{}\protected@file@percent }
+\newlabel{tab:adapt}{{3}{8}{}{table.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Adaptation}{8}{}\protected@file@percent }
+\newlabel{sec:adaptation}{{6}{8}{}{section.6}{}}
+\citation{lu2019}
+\citation{adwin}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Adaptation strategies under the same protocol (blue: variants driven by the covariate/acceleration diagnosis). (a) Forgetting, with the error bar showing the EWC $\lambda $ plateau and the dotted line the no-replay control. (b) ADE after adaptation on both regimes, with the unadapted model as reference (dashed lines).}}{9}{}\protected@file@percent }
+\newlabel{fig:finetune}{{3}{9}{}{figure.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Online Detection}{9}{}\protected@file@percent }
+\newlabel{sec:detection}{{7}{9}{}{section.7}{}}
+\citation{page_hinkley}
+\citation{kswin}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Layered detection architecture, with metrics on the test split of each fold (A/B). All signals use robust normalization with $w = 200$; each detector is configured per fold during calibration.}}{10}{}\protected@file@percent }
+\newlabel{tab:detection}{{4}{10}{}{table.4}{}}
+\citation{salzmann2020,yuan2021}
+\bibcite{seq2seq}{1}
+\@writefile{toc}{\contentsline {section}{\numberline {8}Conclusions and Future Work}{11}{}\protected@file@percent }
+\newlabel{sec:conclusion}{{8}{11}{}{section.8}{}}
+\bibcite{bahdanau}{2}
+\bibcite{kalman}{3}
+\bibcite{adam}{4}
+\bibcite{kliep}{5}
+\bibcite{sugiyama_book}{6}
+\bibcite{kanamori2009}{7}
+\bibcite{yamada2013}{8}
+\bibcite{lopezpaz2017}{9}
+\bibcite{gama2014}{10}
+\bibcite{lu2019}{11}
+\bibcite{adwin}{12}
+\bibcite{page_hinkley}{13}
+\bibcite{kswin}{14}
+\bibcite{kirkpatrick2017}{15}
+\bibcite{alahi2016}{16}
+\bibcite{salzmann2020}{17}
+\bibcite{yuan2021}{18}
+\bibcite{gu2022}{19}
+\gdef \@abspage@last{13}

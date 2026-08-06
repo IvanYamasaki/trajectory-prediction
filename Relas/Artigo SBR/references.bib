@@ -1,0 +1,106 @@
+%=============================================================================
+%  references.bib  -- padrao IEEE (bibliographystyle{IEEEtran})
+%
+%  REGRAS:
+%   * Use as abreviacoes IEEE dos veiculos (ver tabela no fim do arquivo).
+%   * Prefira a versao publicada (conferencia/periodico) ao arXiv.
+%   * 15 a 30 referencias, maioria dos ultimos 5 anos.
+%   * DOUBLE-BLIND: nao inclua notas do tipo "our previous work" em campo note.
+%   * Proteja siglas e nomes proprios com chaves: {SLAM}, {ROS~2}, {B}razil.
+%=============================================================================
+
+@book{ref_classic,
+  author    = {Sebastian Thrun and Wolfram Burgard and Dieter Fox},
+  title     = {Probabilistic Robotics},
+  publisher = {MIT Press},
+  address   = {Cambridge, MA, USA},
+  year      = {2005}
+}
+
+@inproceedings{ref_learning,
+  author    = {Given Name Surname and Given Name Surname},
+  title     = {A learning-based approach for {X} in mobile robotics},
+  booktitle = {Proc. IEEE Int. Conf. Robot. Autom. (ICRA)},
+  address   = {City, Country},
+  pages     = {1234--1240},
+  year      = {2024},
+  doi       = {10.1109/ICRA00000.2024.0000000}
+}
+
+@article{ref_transformer,
+  author  = {Given Name Surname and Given Name Surname},
+  title   = {Transformer-based trajectory prediction for autonomous vehicles},
+  journal = {IEEE Robot. Autom. Lett.},
+  volume  = {9},
+  number  = {3},
+  pages   = {2100--2107},
+  year    = {2024},
+  doi     = {10.1109/LRA.2024.0000000}
+}
+
+@inproceedings{ref_sbr,
+  author    = {Given Name Surname},
+  title     = {A method for {SLAM} in dynamic environments},
+  booktitle = {Proc. Latin American Robotics Symp. / Brazilian Symp. Robot. (LARS/SBR)},
+  pages     = {55--60},
+  year      = {2025},
+  doi       = {10.1109/LARS00000.2025.0000000}
+}
+
+@article{ref_journal,
+  author  = {Given Name Surname and Given Name Surname},
+  title   = {Title of the journal paper},
+  journal = {J. Intell. Robot. Syst.},
+  volume  = {110},
+  number  = {2},
+  pages   = {1--18},
+  year    = {2024},
+  doi     = {10.1007/s10846-024-00000-0}
+}
+
+@misc{ref_arxiv,
+  author       = {Given Name Surname},
+  title        = {Title of the preprint},
+  howpublished = {arXiv:2501.00000},
+  year         = {2025},
+  note         = {[Online]. Available: https://arxiv.org/abs/2501.00000}
+}
+
+@misc{ref_software,
+  author       = {{Open Robotics}},
+  title        = {{ROS}~2 Humble Hawksbill},
+  year         = {2022},
+  note         = {[Online]. Available: https://docs.ros.org}
+}
+
+% Exemplo de citacao de trabalho proprio ainda em revisao (double-blind).
+% ATENCAO: BibTeX NAO trata "%" como comentario -- ele procura o caractere
+% arroba em qualquer lugar do arquivo. Por isso o exemplo abaixo usa "(at)"
+% no lugar da arroba; troque ao usar de verdade.
+%
+%   (at)misc{ref_anonymous,
+%     author = {Anonymous},
+%     title  = {Title omitted for double-blind review},
+%     year   = {2026},
+%     note   = {Under review}
+%   }
+
+%-----------------------------------------------------------------------------
+% ABREVIACOES IEEE MAIS USADAS EM ROBOTICA
+%-----------------------------------------------------------------------------
+% Proc. IEEE Int. Conf. Robot. Autom. (ICRA)
+% Proc. IEEE/RSJ Int. Conf. Intell. Robots Syst. (IROS)
+% Proc. Robot.: Sci. Syst. (RSS)
+% Proc. Conf. Robot Learn. (CoRL)
+% Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR)
+% Proc. IEEE Intell. Veh. Symp. (IV)
+% Proc. IEEE Int. Conf. Intell. Transp. Syst. (ITSC)
+% Proc. Latin American Robotics Symp. / Brazilian Symp. Robot. (LARS/SBR)
+% IEEE Trans. Robot.            -> IEEE Transactions on Robotics
+% IEEE Robot. Autom. Lett.      -> RA-L
+% IEEE Trans. Intell. Transp. Syst.
+% IEEE Trans. Pattern Anal. Mach. Intell.
+% Int. J. Robot. Res.           -> IJRR
+% J. Intell. Robot. Syst.       -> JINT
+% Robot. Auton. Syst.
+%-----------------------------------------------------------------------------

@@ -1,0 +1,340 @@
+%=============================================================================
+%  SBR 2026 - Brazilian Symposium on Robotics
+%  Joao Pessoa, PB, Brazil - November 24-27, 2026
+%  https://www.natalnet.br/sbr2026/
+%
+%  VERSAO DE SUBMISSAO - DOUBLE BLIND
+%  ---------------------------------------------------------------------------
+%  REGRAS OBRIGATORIAS (nao violar):
+%   * Ingles.
+%   * Maximo 6 paginas, INCLUINDO figuras, tabelas e referencias.
+%   * Classe IEEEtran, opcao "conference". NAO alterar margens/fontes.
+%   * NENHUMA identificacao de autor, afiliacao, e-mail, cidade, laboratorio,
+%     agencia de fomento, numero de processo ou agradecimento.
+%   * Autocitacoes SEMPRE em terceira pessoa.
+%   * Submissao: https://jems3.sbc.org.br/sbr2026  (deadline 30/07/2026)
+%
+%  NA CAMERA-READY (15/09/2026): reinserir autores + Acknowledgment
+%  (procure pelos blocos marcados com "CAMERA-READY").
+%=============================================================================
+
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+% Se o compilador reclamar de \IEEEoverridecommandlockouts, apenas comente a linha.
+
+%----------------------------- Pacotes ---------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{subcaption}       % NAO use "subfigure" (obsoleto)
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{cite}
+\usepackage[hidelinks]{hyperref}   % sempre por ultimo (antes de cleveref)
+\usepackage{cleveref}
+
+%--------------------- Limpeza de metadados do PDF ---------------------------
+% CRITICO PARA O DOUBLE-BLIND: impede que o nome do autor vaze no PDF.
+\hypersetup{
+  pdftitle={SBR 2026 Submission},
+  pdfauthor={},
+  pdfsubject={},
+  pdfkeywords={},
+  pdfcreator={}
+}
+
+\graphicspath{{fig/}}
+
+%--------------------------- Macros uteis ------------------------------------
+\newcommand{\ours}{the proposed method}   % evita "our method" em excesso
+
+% Placeholder de figura: permite compilar o esqueleto SEM os arquivos de imagem.
+% Ao inserir as figuras reais, troque \figph{...} por \includegraphics{...}.
+\newcommand{\figph}[2][\columnwidth]{%
+  \fbox{\parbox[c][2.6cm][c]{\dimexpr#1-2\fboxsep-2\fboxrule\relax}{%
+    \centering\footnotesize\texttt{#2}\\[2pt]
+    (figure placeholder --- replace with \texttt{\textbackslash includegraphics})}}}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+
+\begin{document}
+
+%============================== TITULO =======================================
+% Titulo: informativo, sem siglas obscuras, sem ":" duplo.
+\title{Title of the Paper: Concise, Specific and Informative\\
+{\footnotesize \textit{(remove any subtitle that identifies a project or lab)}}}
+
+%============================== AUTORES ======================================
+% >>> VERSAO DE SUBMISSAO (DOUBLE BLIND) - MANTENHA ESTE BLOCO <<<
+\author{\IEEEauthorblockN{Anonymous Author(s)}
+\IEEEauthorblockA{\textit{Affiliation omitted for double-blind review}\\
+\textit{Institution omitted}\\
+Contact information omitted}}
+
+% >>> CAMERA-READY: apague o bloco acima e descomente o modelo abaixo <<<
+% \author{
+% \IEEEauthorblockN{1\textsuperscript{st} Given Name Surname}
+% \IEEEauthorblockA{\textit{dept. name of organization} \\
+% \textit{name of organization}\\ City, Country \\ email@domain}
+% \and
+% \IEEEauthorblockN{2\textsuperscript{nd} Given Name Surname}
+% \IEEEauthorblockA{\textit{dept. name of organization} \\
+% \textit{name of organization}\\ City, Country \\ email@domain}
+% }
+
+\maketitle
+
+%============================== ABSTRACT =====================================
+% 150-250 palavras. Sem citacoes, sem siglas nao definidas, sem equacoes.
+% Formula: contexto -> lacuna -> o que foi feito -> como -> resultado NUMERICO -> impacto.
+\begin{abstract}
+One or two sentences of context on the robotics problem.
+One sentence stating the specific gap or limitation of existing approaches.
+This paper presents \emph{X}, a \ldots{} that \ldots.
+The method combines \ldots{} with \ldots, and is evaluated on \ldots{}
+(simulation in Gazebo / dataset \ldots{} / a real differential-drive platform).
+Experiments against \emph{N} baselines show a reduction of \emph{YY}\,\% in
+\emph{metric}, while running at \emph{Z}\,Hz on \emph{hardware class}.
+The results indicate that \ldots.
+\end{abstract}
+
+%============================== KEYWORDS =====================================
+% 3-6 termos, alinhados aos topicos de interesse do SBR 2026.
+\begin{IEEEkeywords}
+mobile robotics, motion planning, deep learning, autonomous navigation, ROS~2
+\end{IEEEkeywords}
+
+%============================ I. INTRODUCTION ================================
+\section{Introduction}
+\label{sec:intro}
+
+Paragraph 1 --- \textbf{Context}: why this robotics problem matters
+(application, safety, autonomy level).
+
+Paragraph 2 --- \textbf{State of the art in one breath}: classical approaches
+\cite{ref_classic} and learning-based approaches \cite{ref_learning} have
+addressed \ldots.
+
+Paragraph 3 --- \textbf{Gap}: however, existing methods
+(i) assume \ldots, (ii) do not scale to \ldots, and (iii) were not validated
+under \ldots.
+
+Paragraph 4 --- \textbf{Proposal}: this paper proposes \ldots.
+
+\noindent The main contributions of this work are:
+\begin{enumerate}
+  \item A \ldots{} formulation that \ldots;
+  \item A \ldots{} architecture/algorithm that \ldots;
+  \item An experimental evaluation on \ldots{} showing \ldots{} against
+        \emph{N} baselines, including an ablation study of \ldots.
+\end{enumerate}
+
+The remainder of this paper is organized as follows.
+Section~\ref{sec:related} reviews related work.
+Section~\ref{sec:method} describes the proposed approach.
+Section~\ref{sec:setup} presents the experimental setup and
+Section~\ref{sec:results} discusses the results.
+Section~\ref{sec:conclusion} concludes the paper.
+
+%============================ II. RELATED WORK ===============================
+\section{Related Work}
+\label{sec:related}
+
+% Organize por FAMILIA de abordagem, nao por artigo ("[1] did X. [2] did Y.").
+% ATENCAO DOUBLE-BLIND: cite trabalhos proprios em TERCEIRA PESSOA.
+%   ERRADO: "In our previous work [7], we showed..."
+%   CERTO : "Silva et al. [7] proposed ..., which is adopted here as baseline."
+
+\subsection{Classical approaches}
+Methods based on \ldots{} \cite{ref_classic} \ldots.
+
+\subsection{Learning-based approaches}
+More recently, \ldots{} \cite{ref_learning,ref_transformer} \ldots.
+
+\subsection{Positioning of this work}
+Unlike the works above, \ours{} \ldots. To the best of the authors'
+knowledge, this is the first work that \ldots.
+% Note: "to the best of the authors' knowledge" (nao "our knowledge") mantem
+% o tom impessoal, embora "our" seja aceitavel em double-blind desde que nao
+% revele identidade. Prefira a forma impessoal.
+
+%============================ III. METHODOLOGY ===============================
+\section{Proposed Approach}
+\label{sec:method}
+
+\subsection{Problem formulation}
+Let $\mathcal{X} \subset \mathbb{R}^n$ denote \ldots{} and let
+$x_t$ be the state at time $t$. The goal is to find
+
+\begin{equation}
+  \pi^{\star} = \argmin_{\pi \in \Pi} \; \mathbb{E}\!\left[ \sum_{t=0}^{T} c(x_t, \pi(x_t)) \right],
+  \label{eq:problem}
+\end{equation}
+
+\noindent subject to \ldots. Every symbol used in \eqref{eq:problem} must be
+defined at first use.
+
+\subsection{System overview}
+Figure~\ref{fig:arch} shows the overall architecture, composed of
+(i) \ldots, (ii) \ldots{} and (iii) \ldots.
+
+\begin{figure}[!t]
+  \centering
+  % Use PDF vetorial para diagramas; PNG >= 300 dpi para fotos.
+  % ATENCAO: remova logos institucionais e nomes de pessoas das imagens.
+  % \includegraphics[width=\columnwidth]{arch.pdf}
+  \figph{fig/arch.pdf}
+  \caption{Overview of the proposed architecture. The perception module
+  produces \ldots, which feeds the \ldots{} module.}
+  \label{fig:arch}
+\end{figure}
+
+\subsection{Module A}
+\ldots
+
+\subsection{Module B}
+\ldots
+
+\begin{algorithm}[t]
+\caption{Proposed procedure}
+\label{alg:main}
+\begin{algorithmic}[1]
+\Require initial state $x_0$, goal $g$, model $f_\theta$
+\Ensure trajectory $\tau$
+\State $\tau \gets \{x_0\}$
+\For{$t = 0$ \textbf{to} $T-1$}
+  \State $u_t \gets \pi_\theta(x_t, g)$
+  \State $x_{t+1} \gets f(x_t, u_t)$
+  \State $\tau \gets \tau \cup \{x_{t+1}\}$
+\EndFor
+\State \Return $\tau$
+\end{algorithmic}
+\end{algorithm}
+
+%========================== IV. EXPERIMENTAL SETUP ===========================
+\section{Experimental Setup}
+\label{sec:setup}
+
+\subsection{Datasets / environments}
+% Se o dataset for do proprio grupo, descreva-o sem nomear o laboratorio:
+% "an in-house dataset collected with a differential-drive platform".
+\ldots
+
+\subsection{Baselines}
+\ours{} is compared against \cite{ref_classic}, \cite{ref_learning} and
+\cite{ref_transformer}, all reimplemented/retrained under identical conditions.
+
+\subsection{Metrics}
+\ldots{} (define each metric with its unit and whether lower/higher is better).
+
+\subsection{Implementation details}
+% Reprodutibilidade: versoes, hardware, hiperparametros, tempo de treino.
+Experiments were run on \emph{hardware class} (e.g., an NVIDIA RTX-class GPU),
+using ROS~2 Humble and PyTorch~2.x. Training used \ldots{} for \ldots{} epochs
+with learning rate \ldots. All results are averaged over \emph{k} runs with
+different random seeds; mean and standard deviation are reported.
+% DOUBLE-BLIND: nada de "our cluster at <universidade>".
+
+% Codigo/dados: anonimize ou omita.
+The source code will be made publicly available upon acceptance
+(link omitted for double-blind review).
+
+%======================== V. RESULTS AND DISCUSSION ==========================
+\section{Results and Discussion}
+\label{sec:results}
+
+\subsection{Quantitative results}
+Table~\ref{tab:results} reports \ldots.
+
+\begin{table}[!t]
+  \caption{Comparison against baselines. Best results in bold.
+           $\downarrow$ indicates that lower is better.}
+  \label{tab:results}
+  \centering
+  \begin{tabular}{lccc}
+    \toprule
+    Method & Metric A $\downarrow$ & Metric B $\downarrow$ & Runtime (ms) \\
+    \midrule
+    Baseline~1 \cite{ref_classic}      & 0.52 & 1.10 & \textbf{8} \\
+    Baseline~2 \cite{ref_learning}     & 0.47 & 0.99 & 21 \\
+    Baseline~3 \cite{ref_transformer}  & 0.44 & 0.93 & 34 \\
+    \textbf{Proposed}                  & \textbf{0.41} & \textbf{0.88} & 15 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Ablation study}
+Table~\ref{tab:ablation} isolates the contribution of each component.
+
+\begin{table}[!t]
+  \caption{Ablation study of the proposed components.}
+  \label{tab:ablation}
+  \centering
+  \begin{tabular}{ccc c}
+    \toprule
+    Comp.~A & Comp.~B & Comp.~C & Metric A $\downarrow$ \\
+    \midrule
+    \checkmark &            &            & 0.50 \\
+    \checkmark & \checkmark &            & 0.45 \\
+    \checkmark & \checkmark & \checkmark & \textbf{0.41} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Qualitative results}
+Figure~\ref{fig:qualitative} illustrates \ldots.
+
+\begin{figure*}[!t]   % ocupa as duas colunas
+  \centering
+  % Nas versoes finais, troque \figph por:
+  %   \includegraphics[width=\textwidth]{qual_a.pdf}
+  \begin{subfigure}[b]{0.32\textwidth}
+    \figph[\textwidth]{fig/qual\_a.pdf}\caption{Scenario A}\label{fig:qa}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.32\textwidth}
+    \figph[\textwidth]{fig/qual\_b.pdf}\caption{Scenario B}\label{fig:qb}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.32\textwidth}
+    \figph[\textwidth]{fig/qual\_c.pdf}\caption{Scenario C}\label{fig:qc}
+  \end{subfigure}
+  \caption{Qualitative comparison in three representative scenarios.
+  Curves are distinguishable in grayscale.}
+  \label{fig:qualitative}
+\end{figure*}
+
+\subsection{Discussion and limitations}
+The results indicate that \ldots. Nevertheless, \ours{} presents the following
+limitations: (i) \ldots; (ii) \ldots. These aspects motivate the extensions
+discussed in Section~\ref{sec:conclusion}.
+
+%============================ VI. CONCLUSION =================================
+\section{Conclusion and Future Work}
+\label{sec:conclusion}
+
+This paper presented \ldots. Experiments on \ldots{} showed \ldots.
+Future work includes \ldots, \ldots{} and validation on a physical platform
+under \ldots.
+% Nao apresente resultados novos na conclusao.
+
+%========================= ACKNOWLEDGMENT (CAMERA-READY) =====================
+% !!! NAO INCLUIR NA SUBMISSAO DOUBLE-BLIND !!!
+% Descomente somente na camera-ready:
+%
+% \section*{Acknowledgment}
+% The authors thank <agencia> for financial support under grant <numero>.
+
+%============================== REFERENCIAS ==================================
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+% Alternativa sem BibTeX (se preferir lista manual):
+% \begin{thebibliography}{00}
+% \bibitem{ref_classic} S. Thrun, W. Burgard, and D. Fox, \emph{Probabilistic Robotics}. Cambridge, MA, USA: MIT Press, 2005.
+% \end{thebibliography}
+
+\end{document}
