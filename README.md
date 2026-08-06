@@ -24,6 +24,19 @@ information about the ball is available below:
 To find out more about the model's architecture, training and testing procedures, please check out
 my [graduation thesis](https://github.com/LucasSte/Research/blob/4c6dd15c91670505114df42b3bab0490a8bf1844/tese.pdf).
 
+### Environment
+
+The project targets **Python 3.12** (newer versions currently lack wheels for some pinned dependencies, e.g. `ruptures`).
+
+```
+python -m venv venv
+venv\Scripts\activate        # Windows (or: source venv/bin/activate)
+pip install -r requirements.txt
+pip install -r requirements-dev.txt   # optional: pytest + nbstripout
+```
+
+Note: model weights (`weights/*.h5`), normalization stats (`model/*.pkl`), processed datasets (`dataset/proc_set_*`) and the `covariate_shift_out/` artefacts are not versioned — they are produced by the dataset preparation, training and `model_analise/compute_trajectory_errors.py` steps below. Precomputed figures and CSV results are available under `Relas/results/`.
+
 ### Running the models
 
 #### Prepare the dataset
@@ -43,12 +56,11 @@ Each model has been trained in two configurations:
 2. A look back window of 60 time steps and a prediction of 30 time steps.
 
 If you would like to visualize plots of batch error and validation error during training,
-uncomment the `plot` function in `model_analise/train_models.py` and in
-`model_analise/comparison_tests.py`.
+uncomment the `plot` function in `model_analise/train_models.py`.
 
 #### Testing the models
 
-Running `python3 model_analise/compare_models.py` will run all the trained configurations in a testing set.
+Running `python3 model_analise/compare.py` will run the trained configurations in a testing set.
 It will calculate the mean average error, average displacement error and final displacement error and print them.
 It will also measure such metrics for a Kalman predictor, which serves as a reference for comparison.
 
@@ -58,11 +70,11 @@ This repository extends the original model with a full **data drift analysis pip
 
 The pipeline has four stages:
 1. **Granular infrastructure** (`model_analise/compute_trajectory_errors.py`, `drift_analise/chapter01_descriptive_pipeline.py` — covariate-shift tables and per-game kinematic features) — trajectory-level ADE/FDE.
-2. **Formal drift detection** (`drift_analise/drift_analise.ipynb`, `drift_analise/chapter02_deteccao_pipeline.py`) — ADWIN, Page-Hinkley, KSWIN online detectors and offline Pelt change-point detection with null-detector permutation test.
+2. **Formal drift detection** (`drift_analise/02_deteccao_no_stream.ipynb`, `drift_analise/chapter02_deteccao_pipeline.py`) — ADWIN, Page-Hinkley, KSWIN online detectors and offline Pelt change-point detection with null-detector permutation test.
 3. **Covariate-shift quantification** (`drift_analise/chapter03_visuals.py` — `main_compute_importance_weights`) — LSIF importance weighting decomposes excess ADE into covariate vs concept drift; per-feature analysis ranks kinematic dimensions by explanatory power.
 4. **Selective retraining** (`model_analise/retrain_at_breakpoints.py`) — fine-tuning at Pelt breakpoints with early-stop on catastrophic-interference ratio.
 
-All generated figures (PT/EN) and CSV artefacts are under `Relas/results/drift/<chapter>/`. For the full data dictionary and reproduction steps see [`Relas/PIPELINE.md`](Relas/PIPELINE.md).
+All generated figures (PT/EN) and CSV artefacts are under `Relas/results/drift/<chapter>/`, organized by the same chapters as the notebooks `drift_analise/01..04_*.ipynb`.
 
 ### Project layout
 
