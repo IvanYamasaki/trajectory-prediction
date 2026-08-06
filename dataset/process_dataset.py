@@ -1,32 +1,62 @@
-import os
-import sys
+"""Processa logs brutos (data_set_<N>.log) em conjuntos suavizados (proc_set_<N>.pkl).
 
-# Crucial: Isso permite que o Python encontre os scripts dentro da pasta dataset
-# sem precisar dos pontos de importação relativa.
+Uso (de qualquer cwd):
+    python dataset/process_dataset.py           # processa todos os data_set_<N>.log presentes
+    python dataset/process_dataset.py 33 34     # apenas os conjuntos 33 e 34
+
+Os logs brutos vem de dataset/download_dataset.py. A suavizacao usa os
+parametros de Kalman ja calibrados (dataset/*_series_params.pkl, versionados);
+a recalibracao (smoother_params.py) so e necessaria se eles forem removidos.
+"""
+import argparse
+import os
+import re
+import sys
+from pathlib import Path
+
+# Permite importar os modulos locais da pasta dataset sem import relativo,
+# e fixa o cwd na raiz do repo (read_logs/smooth_data usam paths 'dataset/...').
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
+os.chdir(os.path.dirname(current_dir))
 
-from read_logs import process_log # Sem ponto
-from smoother_params import get_ball_position_series_params, get_robot_position_series_params, get_robot_heading_series_params # Sem ponto
-from smooth_data import Smoother # Sem ponto
+from read_logs import process_log  # noqa: E402
+from smooth_data import Smoother  # noqa: E402
 
-data_set_files = ['data_set_33', 'data_set_34', 'data_set_35', 'data_set_36', 'data_set_37', 'data_set_38']
-processed_data_files = ['proc_set_33', 'proc_set_34', 'proc_set_35', 'proc_set_36', 'proc_set_37', 'proc_set_38']
 
-print("---- Lendo arquivos de log brutos (Segmentos de Jogo) ----")
-for file in data_set_files:
-    print(f"Processando: {file}")
-    process_log(file)
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("sets", nargs="*", type=int, help="numeros dos data_sets (default: todos os .log presentes)")
+    args = ap.parse_args()
 
-# print('---- Calibrando Parâmetros do Kalman ----')
-# get_ball_position_series_params()
-# get_robot_position_series_params()
-# get_robot_heading_series_params()
+    if args.sets:
+        ns = sorted(args.sets)
+    else:
+        ns = sorted(
+            int(m.group(1))
+            for f in Path(current_dir).glob("data_set_*.log")
+            if (m := re.fullmatch(r"data_set_(\d+)\.log", f.name))
+        )
+    if not ns:
+        sys.exit("nenhum data_set_<N>.log encontrado em dataset/ — rode antes: python dataset/download_dataset.py")
 
-print("---- Suavizando os dados ----")
-smoother = Smoother()
-for (source, dest) in zip(data_set_files, processed_data_files):
-    print(f"Suavizando {source} -> {dest}")
-    smoother.smooth_data(source, dest)
+    missing = [n for n in ns if not (Path(current_dir) / f"data_set_{n}.log").exists()]
+    if missing:
+        sys.exit(f"faltam os arquivos data_set_{missing}.log — rode antes: python dataset/download_dataset.py {' '.join(map(str, missing))}")
 
-print("---- Processamento Concluído! ----")
+    print("---- Lendo arquivos de log brutos (Segmentos de Jogo) ----")
+    for n in ns:
+        print(f"Processando: data_set_{n}")
+        process_log(f"data_set_{n}")
+
+    print("---- Suavizando os dados ----")
+    smoother = Smoother()
+    for n in ns:
+        print(f"Suavizando data_set_{n} -> proc_set_{n}")
+        smoother.smooth_data(f"data_set_{n}", f"proc_set_{n}")
+
+    print("---- Processamento Concluido! ----")
+
+
+if __name__ == "__main__":
+    main()

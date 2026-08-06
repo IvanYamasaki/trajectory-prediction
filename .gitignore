@@ -46,3 +46,8 @@ setup_openreview_mcp.*
 
 # artefato computado grande demais para o GitHub (regeneravel via mes11_accel_battery)
 Relas/results/drift/mes11_accel_battery/features_ext.parquet
+
+# parametros calibrados do Kalman: pequenos e necessarios para processar o dataset
+!dataset/position_series_params.pkl
+!dataset/heading_series_params.pkl
+!dataset/ball_positions_series_params.pkl
