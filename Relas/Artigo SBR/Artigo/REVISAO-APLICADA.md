@@ -5,9 +5,9 @@ Dois arquivos, mesmo conteúdo base:
 | Arquivo | O que é |
 |---|---|
 | `main.tex` → `main.pdf` (5 pág.) | versão **antiga**, anotada: grifo amarelo = texto que saiu ou foi reescrito; marcas `[+ ...]` = onde entrou material novo |
-| `main_corrigido.tex` → `main_corrigido.pdf` (6 pág.) | versão **final**, sem nenhuma marcação, já com a revisão de estilo |
+| `main_double_blind.tex` → `main_double_blind.pdf` (6 pág.) | versão **final**, sem nenhuma marcação, já com a revisão de estilo |
 
-O `main_corrigido.tex` não tem mais `\chg`, `soul` nem `xcolor` — é o arquivo pronto
+O `main_double_blind.tex` não tem mais `\chg`, `soul` nem `xcolor` — é o arquivo pronto
 para submissão. Para ver o que mudou, compare com `main.pdf`.
 
 ---
@@ -95,7 +95,7 @@ figura ou afirmação técnica foi alterado — só a redação.
 
 ## Estado da compilação
 
-- `main.pdf`: 5 páginas · `main_corrigido.pdf`: **6 páginas** (limite da SBR é 6)
+- `main.pdf`: 5 páginas · `main_double_blind.pdf`: **6 páginas** (limite da SBR é 6)
 - zero `Overfull \hbox`, zero citação/referência indefinida em ambos
 - double-blind mantido: sem autores no corpo, metadados do PDF limpos (`Author:` vazio,
   `Title: SBR 2026 Submission`)

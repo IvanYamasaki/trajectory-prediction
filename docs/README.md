@@ -4,7 +4,7 @@ Material final do projeto de Iniciação Científica **"Data Drift em um modelo 
 
 ## Artigo
 
-- [`paper/data-drift-seq2seq-robocup-ssl.pdf`](paper/data-drift-seq2seq-robocup-ssl.pdf) — versão final do artigo (SBR) com autores, agradecimentos e link do repositório. As fontes LaTeX, bibliografia e figuras estão em [`../Relas/Artigo SBR/Artigo/`](../Relas/Artigo%20SBR/Artigo/) (`main_camera_ready.tex`; a versão double-blind submetida é `main_corrigido.tex`).
+- [`paper/data-drift-seq2seq-robocup-ssl.pdf`](paper/data-drift-seq2seq-robocup-ssl.pdf) — versão final do artigo (SBR) com autores, agradecimentos e link do repositório. As fontes LaTeX, bibliografia e figuras estão em [`../Relas/Artigo SBR/Artigo/`](../Relas/Artigo%20SBR/Artigo/) (`main_camera_ready.tex`; a versão double-blind submetida é `main_double_blind.tex`).
 
 ## Slides
 

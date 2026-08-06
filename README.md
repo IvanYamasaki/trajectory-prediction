@@ -15,7 +15,7 @@ O modelo base (arquitetura, treino e dataset original) vem do repositório [Luca
 | `model_analise/` | Arquitetura seq2seq (`ai_model/`), núcleo compartilhado (`core/`), treino, comparação e estratégias de adaptação (EWC, replay, targeted, retrain em breakpoints) |
 | `drift_analise/` | Pipeline de drift em 4 capítulos (`chapter01..04_*.py` + notebooks `01..04_*.ipynb`), fases de engenharia de detecção (`phase1..4`, `mes10_*`, `mes11_*`) e figuras do artigo (`paper_figs.py`) |
 | `Relas/` | Relatórios LaTeX (`checkpoint/`, `main_pt/`, `main_en/`, `Artigo SBR/`) e resultados gerados (`results/`) |
-| `docs/` | **Artigo final (`main_corrigido.pdf`) e slides PT/EN** |
+| `docs/` | **Artigo final (`data-drift-seq2seq-robocup-ssl.pdf`) e slides PT/EN** |
 | `tests/` | Testes (pytest) |
 
 ## Ambiente
