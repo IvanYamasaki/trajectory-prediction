@@ -13,6 +13,11 @@ h5py==3.15.1
 idna==3.11
 joblib==1.5.3
 keras==3.13.1
+pandas==2.3.3
+pyarrow==24.0.0
+pytz==2026.1.post1
+tzdata==2025.3
+tabulate==0.10.0
 kiwisolver==1.4.9
 libclang==18.1.1
 Markdown==3.10
