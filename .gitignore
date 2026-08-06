@@ -30,3 +30,16 @@ covariate_shift_out/
 drift_analise/drift_analise.nbconvert.ipynb
 pdf_comments_extracted.txt
 dataset/blender-5.0.1-windows-x64.msi
+# local tooling / IDE
+.vscode/
+.mcp.json
+.claude/
+.venv312/
+.graphify_python
+graphify-out/
+setup_openreview_mcp.*
+
+# pessoais / rascunho (raiz)
+/*.pdf
+/drift_analise.ipynb
+*_backup.csv
