@@ -4,7 +4,7 @@ Material final do projeto de Iniciação Científica **"Data Drift em um modelo 
 
 ## Artigo
 
-- [`paper/main_corrigido.pdf`](paper/main_corrigido.pdf) — versão final revisada do artigo (SBR). As fontes LaTeX, bibliografia e figuras estão em [`../Relas/Artigo SBR/Artigo/`](../Relas/Artigo%20SBR/Artigo/).
+- [`paper/data-drift-seq2seq-robocup-ssl.pdf`](paper/data-drift-seq2seq-robocup-ssl.pdf) — versão final revisada do artigo (SBR). As fontes LaTeX, bibliografia e figuras estão em [`../Relas/Artigo SBR/Artigo/`](../Relas/Artigo%20SBR/Artigo/) (compilado como `main_corrigido.tex`).
 
 ## Slides
 
