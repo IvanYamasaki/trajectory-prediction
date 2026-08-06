@@ -23,7 +23,6 @@ from __future__ import annotations
 import argparse
 import os
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
-import pickle
 import re
 import sys
 from pathlib import Path
@@ -32,9 +31,17 @@ from typing import Dict, List
 import numpy as np
 import pandas as pd
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT))
-os.chdir(PROJECT_ROOT)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.bootstrap import init_project
+
+PROJECT_ROOT = init_project()
+
+# Mapping proc_set -> ano (igual ao chapter01_descriptive_pipeline / plot covariate)
+from common.constants import PROC_YEAR
+from common.paths import norm_stats_path, weights_path
+from model_analise.core.metrics import per_traj_metrics
+from model_analise.core.model_io import build_seq2seq, load_loader
+
 
 # As importações pesadas (TF + LoadDataSet) são lazy
 def _import_heavy():
@@ -48,21 +55,11 @@ def _import_heavy():
 OUTDIR = "covariate_shift_out"
 DATASET_CSV = "drift_analise/dataset/dataset.csv"
 
-# Mapping proc_set -> ano (igual ao plot_covariate_shift.py)
-PROC_YEAR = {
-    3: 2019, 4: 2019, 5: 2019, 6: 2019, 7: 2019, 8: 2019,
-    9: 2021, 10: 2021, 11: 2021, 12: 2021, 13: 2021, 14: 2021,
-    15: 2023, 16: 2023, 17: 2023, 18: 2023, 19: 2023, 20: 2023,
-    21: 2025, 22: 2025, 23: 2025, 24: 2025, 25: 2025, 26: 2025,
-    27: 2022, 28: 2022, 29: 2022, 30: 2022, 31: 2022, 32: 2022,
-    33: 2024, 34: 2024, 35: 2024, 36: 2024, 37: 2024, 38: 2024,
-}
-
 CFG = {
-    "30→15": {"look_back": 30, "look_forth": 15, "weights": "weights/robot_30_15_t.weights.h5",
-              "stats": "model/normalization_stats_30_15.pkl"},
-    "60→30": {"look_back": 60, "look_forth": 30, "weights": "weights/robot_60_30_t.weights.h5",
-              "stats": "model/normalization_stats_60_30.pkl"},
+    "30→15": {"look_back": 30, "look_forth": 15, "weights": weights_path(30, 15),
+              "stats": norm_stats_path(30, 15)},
+    "60→30": {"look_back": 60, "look_forth": 30, "weights": weights_path(60, 30),
+              "stats": norm_stats_path(60, 30)},
 }
 
 UNITS = 128
@@ -125,35 +122,6 @@ def sample_games(n_per_year=6, seed=42, exclude_proc=(1, 2),
     return sorted(chosen)
 
 
-def build_loader(LoadDataSet, look_back, look_forth, stats_path):
-    loader = LoadDataSet(look_back, look_forth, target="dv")
-    if not os.path.exists(stats_path):
-        raise FileNotFoundError(
-            f"Arquivo de estatísticas não encontrado: {stats_path}. "
-            f"Sem ele a normalização ficaria errada."
-        )
-    with open(stats_path, "rb") as f:
-        s = pickle.load(f)
-    # injeta stats ANTES do load_data para evitar recálculo
-    loader.robots_avg = np.asarray(s["avg"], dtype=np.float64)
-    loader.robots_std = np.asarray(s["std"], dtype=np.float64)
-    loader.ball_avg   = np.asarray(s["ball_avg"], dtype=np.float64)
-    loader.ball_std   = np.asarray(s["ball_std"], dtype=np.float64)
-    return loader
-
-
-def load_seq2seq(RobotOnlyPredictor, tf, look_back, look_forth, weights):
-    m = RobotOnlyPredictor(
-        units=UNITS, look_back=look_back, look_forth=look_forth,
-        result_dims=2, use_tf_function=False, forcing=False,
-    )
-    m.compile(optimizer=tf.keras.optimizers.Adam(1e-3),
-              loss=tf.keras.losses.MeanSquaredError())
-    _ = m(tf.zeros((1, look_back, 6), tf.float32), training=False)
-    m.load_weights(weights)
-    return m
-
-
 def kalman_preds_norm(x_norm, look_forth):
     # target="dv": constant-velocity baseline means zero velocity increments.
     return np.zeros((x_norm.shape[0], look_forth, 2), dtype=np.float32)
@@ -161,14 +129,6 @@ def kalman_preds_norm(x_norm, look_forth):
 
 def v_to_pos_mm(loader, x_norm, v_norm):
     return loader.convert_batch(x_norm, v_norm)
-
-
-def per_traj_metrics(pos_pred, pos_true):
-    d = pos_pred - pos_true
-    dist = np.linalg.norm(d, axis=-1)  # [N, look_forth]
-    ade = np.mean(dist, axis=1)        # [N]
-    fde = dist[:, -1]                  # [N]
-    return ade.astype(np.float32), fde.astype(np.float32)
 
 
 # ----------------------- main -----------------------------------------------
@@ -212,8 +172,8 @@ def main():
             print(f"[warn] Pesos não encontrados para {horizon}: {cfg['weights']} — pulando.")
             continue
         print(f"\n[info] === Horizonte {horizon} ===")
-        seq = load_seq2seq(RobotOnlyPredictor, tf, cfg["look_back"], cfg["look_forth"],
-                           cfg["weights"])
+        seq = build_seq2seq(cfg["look_back"], cfg["look_forth"], units=UNITS,
+                            weights=cfg["weights"])
 
         for n in chosen:
             fname = f"proc_set_{n}.pkl"
@@ -227,8 +187,7 @@ def main():
             mid = short_match_id(year, fname, log_file, teams)
 
             # loader com stats fixas do treino (NÃO recompute)
-            loader = build_loader(LoadDataSet, cfg["look_back"], cfg["look_forth"],
-                                  cfg["stats"])
+            loader = load_loader(cfg["look_back"], cfg["look_forth"], cfg["stats"])
             try:
                 x_all, _, _, y_v_all = loader.load_data([fpath], for_test=True)
             except Exception as e:

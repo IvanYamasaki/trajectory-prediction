@@ -5,9 +5,10 @@ import os
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT))
-os.chdir(PROJECT_ROOT)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.bootstrap import init_project
+
+PROJECT_ROOT = init_project()
 
 FILE_PATH = 'dataset/proc_set_23.pkl'
 

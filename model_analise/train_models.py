@@ -12,9 +12,10 @@ try:
 except Exception:
     pass
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT))
-os.chdir(PROJECT_ROOT)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.bootstrap import init_project
+
+PROJECT_ROOT = init_project()
 
 import pickle, numpy as np, tensorflow as tf
 from dataset.load_dataset import LoadDataSet

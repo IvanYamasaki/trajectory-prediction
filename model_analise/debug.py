@@ -5,9 +5,10 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT))
-os.chdir(PROJECT_ROOT)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.bootstrap import init_project
+
+PROJECT_ROOT = init_project()
 
 from dataset.load_dataset import LoadDataSet
 from model_analise.ai_model.predictor import RobotOnlyPredictor

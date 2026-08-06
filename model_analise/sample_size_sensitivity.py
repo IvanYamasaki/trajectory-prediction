@@ -6,7 +6,7 @@ Compara estatísticas de ADE (média + CI95 bootstrap) entre o run n=3
 (backup parquet) e o run n=6 (parquet principal após compute_trajectory_errors
 --n_per_year 6 --seed 42).
 
-Saída: Relas/results/mes3/sample_size_sensitivity.csv
+Saída: Relas/results/drift/04_robustez_e_validacao/sample_size_sensitivity.csv
 Colunas: n_per_year, year, model, horizon, ade_mean, ci_lo, ci_hi, n_trajs
 
 Uso:
@@ -20,16 +20,19 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT))
-os.chdir(PROJECT_ROOT)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.bootstrap import init_project
+
+PROJECT_ROOT = init_project()
 
 N_BOOT = 2000
 SEED = 42
 RNG = np.random.default_rng(SEED)
 
+from common.paths import CH04
+
 COV_DIR = Path("covariate_shift_out")
-OUT_DIR = Path("Relas") / "results" / "mes3"
+OUT_DIR = CH04
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 PARQUET_N3 = COV_DIR / "trajectory_errors_sample_n3_backup.parquet"

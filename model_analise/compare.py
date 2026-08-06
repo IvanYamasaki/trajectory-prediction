@@ -1,23 +1,21 @@
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-import os
 import sys
 from pathlib import Path
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT))
-os.chdir(PROJECT_ROOT)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.bootstrap import init_project
+
+PROJECT_ROOT = init_project()
 
 from dataset.load_dataset import LoadDataSet
-from model_analise.ai_model.predictor import RobotOnlyPredictor
+from model_analise.core.model_io import build_seq2seq
 
 SEED = 7
 DATASETS = ["dataset/proc_set_27"]
 N_SAMPLES = 5000
-N_PLOTS = 3
 UNITS = 128
 
 CFG = {
@@ -38,13 +36,6 @@ def build_mlp(look_back, look_forth):
     x = tf.keras.layers.Dense(look_forth * 2)(x)
     out = tf.keras.layers.Reshape((look_forth, 2))(x)
     return tf.keras.Model(inp, out)
-
-def load_seq2seq(look_back, look_forth, weights):
-    m = RobotOnlyPredictor(units=UNITS, look_back=look_back, look_forth=look_forth, result_dims=2, use_tf_function=False, forcing=False)
-    m.compile(optimizer=tf.keras.optimizers.Adam(1e-3), loss=tf.keras.losses.MeanSquaredError())
-    _ = m(tf.zeros((1, look_back, 6), tf.float32), training=False)
-    m.load_weights(weights)
-    return m
 
 def load_mlp(look_back, look_forth, weights):
     m = build_mlp(look_back, look_forth)
@@ -85,30 +76,6 @@ def print_table(tag, n, mk, ms, mm, mode_s):
     print(f"{'MLP':<8} ADE={mm[0]:8.3f}  FDE={mm[1]:8.3f}  MAE={mm[2]:8.3f}")
     print("=" * 64)
 
-def denorm_past(loader, x_norm_one):
-    return x_norm_one[:, 0:2] * loader.robots_std[0:2] + loader.robots_avg[0:2]
-
-def plot_samples(tag, idx_global, x, pos_true, pos_k, pos_s, pos_m, loader, picks, mode_s):
-    os.makedirs("plots", exist_ok=True)
-    for p, j in enumerate(picks, start=1):
-        past = denorm_past(loader, x[j])
-        real = pos_true[j]
-        pk = pos_k[j]
-        ps = pos_s[j]
-        pm = pos_m[j]
-        plt.figure(figsize=(7, 6))
-        plt.plot(past[:, 0], past[:, 1], "b-o", label="Passado")
-        plt.plot(real[:, 0], real[:, 1], "g-o", label="Real")
-        plt.plot(pk[:, 0], pk[:, 1], "k-o", label="Kalman")
-        plt.plot(ps[:, 0], ps[:, 1], "r-o", label=f"Seq2Seq ({mode_s})")
-        plt.plot(pm[:, 0], pm[:, 1], "m-o", label="MLP")
-        plt.title(f"{tag} sample {p} idx={int(idx_global[j])}")
-        plt.axis("equal"); plt.grid(True); plt.legend(); plt.tight_layout()
-        out = f"plots/{tag.replace('→','_')}_sample{p}_idx{int(idx_global[j])}.png"
-        plt.savefig(out, dpi=150)
-        plt.close()
-        print(f"[OK] saved {out}")
-
 def pick_seq2seq_mode(loader, x, y_v, pred_s):
     k = min(256, len(x))
     pos_true = v_to_pos_mm(loader, x[:k], y_v[:k])
@@ -132,7 +99,7 @@ def run_case(tag, cfg, datasets_to_test):
     x = x_all[idx].astype(np.float32)
     y_v = y_v_all[idx].astype(np.float32)
 
-    seq = load_seq2seq(look_back, look_forth, seq_w)
+    seq = build_seq2seq(look_back, look_forth, units=UNITS, weights=seq_w)
     mlp = load_mlp(look_back, look_forth, mlp_w)
 
     pred_k = kalman_preds_norm(x, look_forth)
@@ -151,9 +118,6 @@ def run_case(tag, cfg, datasets_to_test):
     mm = metrics_mm(pos_m, pos_true)
     print_table(tag, n, mk, ms, mm, mode_s)
 
-    # picks = np.random.choice(n, min(N_PLOTS, n), replace=False)
-    # plot_samples(tag, idx, x, pos_true, pos_k, pos_s, pos_m, loader, picks, mode_s)
-    
     return mk, ms, mm
 
 def main():

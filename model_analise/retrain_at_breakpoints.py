@@ -16,27 +16,36 @@ Estratégia:
 
 Saída:
   weights/robot_30_15_t_finetuned_bp{idx}.weights.h5
-  Relas/results/mes3/retrain_results.csv
+  Relas/results/drift/03_covariate_shift_e_explicacao/retrain_results.csv
 
 Uso:
     python model_analise/retrain_at_breakpoints.py
     python model_analise/retrain_at_breakpoints.py --penalty 1 --epochs 10
+    python model_analise/retrain_at_breakpoints.py --grid   # Ponto 5: grid sweep
 """
 from __future__ import annotations
 
 import argparse
 import os
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
-import pickle
 import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT))
-os.chdir(PROJECT_ROOT)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.bootstrap import init_project
+
+PROJECT_ROOT = init_project()
+
+from common.constants import PROC_YEAR, YEAR_ORDER
+from common.paths import CH03
+from model_analise.core.data import load_proc_sets
+from model_analise.core.metrics import compute_ade, per_traj_ade
+from model_analise.core.model_io import (
+    build_seq2seq, freeze_encoder, load_loader as _core_load_loader,
+)
 
 # ─── constantes ──────────────────────────────────────────────────────────
 LOOK_BACK   = 30
@@ -46,18 +55,9 @@ UNITS       = 128
 WEIGHTS_IN  = Path("weights") / "robot_30_15_t.weights.h5"
 STATS_PATH  = Path("model") / "normalization_stats_30_15.pkl"
 COV_DIR     = Path("covariate_shift_out")
-OUT_DIR     = Path("Relas") / "results" / "mes3"
-WEIGHTS_DIR = Path("weights")
 
-PROC_YEAR = {
-    3: 2019, 4: 2019, 5: 2019, 6: 2019, 7: 2019, 8: 2019,
-    9: 2021,10: 2021,11: 2021,12: 2021,13: 2021,14: 2021,
-    15:2023,16:2023,17:2023,18:2023,19:2023,20:2023,
-    21:2025,22:2025,23:2025,24:2025,25:2025,26:2025,
-    27:2022,28:2022,29:2022,30:2022,31:2022,32:2022,
-    33:2024,34:2024,35:2024,36:2024,37:2024,38:2024,
-}
-YEAR_ORDER = [2019, 2021, 2022, 2023, 2024, 2025]
+OUT_DIR     = CH03
+WEIGHTS_DIR = Path("weights")
 
 
 # ─── helpers ─────────────────────────────────────────────────────────────
@@ -79,89 +79,16 @@ def proc_sets_before_after(breakpoint_year: int):
 
 
 def load_loader():
-    from dataset.load_dataset import LoadDataSet
-    loader = LoadDataSet(LOOK_BACK, LOOK_FORTH, target="dv")
-    with open(STATS_PATH, "rb") as f:
-        s = pickle.load(f)
-    loader.robots_avg = np.asarray(s["avg"],      dtype=np.float64)
-    loader.robots_std = np.asarray(s["std"],      dtype=np.float64)
-    loader.ball_avg   = np.asarray(s["ball_avg"], dtype=np.float64)
-    loader.ball_std   = np.asarray(s["ball_std"], dtype=np.float64)
-    return loader
+    return _core_load_loader(LOOK_BACK, LOOK_FORTH, stats_path=STATS_PATH)
 
 
 def load_data_sets(ns: list[int], loader, max_per: int = 8000, seed: int = 42):
-    rng = np.random.default_rng(seed)
-    xs, ys = [], []
-    for n in ns:
-        fpath = f"dataset/proc_set_{n}"
-        if not Path(fpath + ".pkl").exists():
-            continue
-        try:
-            x, _, _, y_v = loader.load_data([fpath], for_test=True)
-        except Exception as e:
-            print(f"  [warn] {fpath}: {e}")
-            continue
-        if len(x) == 0:
-            continue
-        if len(x) > max_per:
-            idx = rng.choice(len(x), max_per, replace=False)
-            idx.sort()
-            x, y_v = x[idx], y_v[idx]
-        xs.append(x)
-        ys.append(y_v)
-    if not xs:
-        return None, None
-    return np.concatenate(xs, axis=0).astype(np.float32), \
-           np.concatenate(ys, axis=0).astype(np.float32)
+    # sort_idx=True reproduz o comportamento original (idx.sort() pós-amostragem)
+    return load_proc_sets(ns, loader, max_per=max_per, seed=seed, sort_idx=True)
 
 
 def build_model(tf):
-    from model_analise.ai_model.predictor import RobotOnlyPredictor
-    m = RobotOnlyPredictor(
-        units=UNITS, look_back=LOOK_BACK, look_forth=LOOK_FORTH,
-        result_dims=2, use_tf_function=False, forcing=False,
-    )
-    m.compile(
-        optimizer=tf.keras.optimizers.Adam(1e-3),
-        loss=tf.keras.losses.MeanSquaredError(),
-    )
-    _ = m(tf.zeros((1, LOOK_BACK, 6), tf.float32), training=False)
-    m.load_weights(str(WEIGHTS_IN))
-    return m
-
-
-def freeze_encoder(model, n_unfreeze: int = 1):
-    """Congela todas as camadas exceto as ultimas ``n_unfreeze``.
-
-    n_unfreeze=1 -> so Dense final (default conservador, baseline)
-    n_unfreeze=2 -> Dense final + camada anterior (recomendado pos-review M3)
-    """
-    for layer in model.layers:
-        layer.trainable = False
-    for layer in model.layers[-n_unfreeze:]:
-        layer.trainable = True
-    frozen = sum(1 for l in model.layers if not l.trainable)
-    trainable = sum(1 for l in model.layers if l.trainable)
-    print(f"  [freeze] {frozen} frozen, {trainable} trainable layers "
-          f"(n_unfreeze={n_unfreeze}).")
-
-
-def compute_ade(model, x, y_v, loader, batch=512):
-    """Retorna ADE médio em mm."""
-    pred_v = model.predict(x, batch_size=batch, verbose=0)
-    pos_pred = loader.convert_batch(x, pred_v.astype(np.float32))
-    pos_true = loader.convert_batch(x, y_v)
-    d = np.linalg.norm(pos_pred - pos_true, axis=-1)  # [N, look_forth]
-    return float(np.mean(np.mean(d, axis=1)))
-
-
-def per_traj_ade(model, x, y_v, loader, batch=512):
-    pred_v = model.predict(x, batch_size=batch, verbose=0)
-    pos_pred = loader.convert_batch(x, pred_v.astype(np.float32))
-    pos_true = loader.convert_batch(x, y_v)
-    d = np.linalg.norm(pos_pred - pos_true, axis=-1)
-    return np.mean(d, axis=1)
+    return build_seq2seq(LOOK_BACK, LOOK_FORTH, units=UNITS, weights=WEIGHTS_IN)
 
 
 BreakpointInfo = dict  # {bp_label, train_proc_sets, test_proc_sets}
@@ -174,7 +101,10 @@ def detect_pelt_breakpoints(penalty: float) -> list[BreakpointInfo]:
     define a fronteira treino/teste. Breakpoints intra-ano são mapeados para a
     transição de ano mais próxima (conservadorismo: não corta um ano ao meio).
     """
-    import ruptures as rpt
+    try:
+        import ruptures as rpt
+    except ImportError:
+        from drift_analise import changepoint_numpy_fallback as rpt
 
     ds = pd.read_csv("drift_analise/dataset/dataset.csv")
     seq = (
@@ -237,6 +167,10 @@ def main() -> None:
     ap.add_argument("--early_stop_cat_ratio", type=float, default=0.5,
                     help="Para o treino se catastrophic_ratio passar deste valor "
                          "(testa apos cada epoca). Default 0.5.")
+    ap.add_argument("--grid", action="store_true",
+                    help="Ponto 5: executa grid sweep de hiperparâmetros "
+                         "(n_unfreeze × lr). Saída: retrain_grid.csv. "
+                         "Não sobrescreve retrain_results.csv.")
     args = ap.parse_args()
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -393,9 +327,111 @@ def main() -> None:
                   f"recovery={row['recovery_pct']:.1f}%  "
                   f"catastrophic_ratio={row['catastrophic_ratio']:.2f}")
         else:
-            print(f"\n[info] bp={row['breakpoint_label']}: critérios não atingidos "
+            print(f"\n[info] bp={row['breakpoint_label']}: criterios nao atingidos "
                   f"(recovery={row['recovery_pct']}, "
                   f"cat_ratio={row['catastrophic_ratio']:.2f})")
+
+    # Ponto 5: grid sweep de hiperparametros
+    if args.grid:
+        print("\n" + "=" * 60)
+        print("[grid] Iniciando sweep de hiperparametros")
+        print("=" * 60)
+
+        GRID_N_UNFREEZE = [1, 2]
+        GRID_LR         = [1e-4, 5e-5, 1e-5]
+        GRID_EPOCHS     = args.epochs
+
+        grid_results = []
+
+        bps_grid = detect_pelt_breakpoints(penalty=args.penalty)
+        if not bps_grid:
+            print("[grid] Nenhum breakpoint -- abortando grid.")
+        else:
+            bp_info_grid = bps_grid[0]
+            before_g = bp_info_grid["train_proc_sets"]
+            after_g  = bp_info_grid["test_proc_sets"]
+
+            x_train_g, y_train_g = load_data_sets(before_g, loader, args.max_per, args.seed)
+            x_test_g,  y_test_g  = load_data_sets(after_g,  loader, args.max_per, args.seed)
+
+            if x_train_g is None or x_test_g is None:
+                print("[grid] Falha ao carregar dados -- abortando grid.")
+            else:
+                for nu in GRID_N_UNFREEZE:
+                    for lr_g in GRID_LR:
+                        tag = f"nu{nu}_lr{lr_g:.0e}"
+                        print(f"\n[grid] config={tag} ...")
+
+                        model_g = build_model(tf)
+                        ade_bef_g     = compute_ade(model_g, x_test_g, y_test_g, loader)
+                        ade_bef_per_g = per_traj_ade(model_g, x_test_g, y_test_g, loader)
+
+                        freeze_encoder(model_g, n_unfreeze=nu)
+                        model_g.compile(
+                            optimizer=tf.keras.optimizers.Adam(lr_g),
+                            loss=tf.keras.losses.MeanSquaredError(),
+                        )
+
+                        epochs_run_g = 0
+                        cat_g = 0.0
+                        for ep_g in range(GRID_EPOCHS):
+                            model_g.fit(x_train_g, y_train_g,
+                                        epochs=1, batch_size=args.batch,
+                                        validation_split=0.1, verbose=0)
+                            ade_now_per_g = per_traj_ade(model_g, x_test_g, y_test_g, loader)
+                            delta_g = ade_now_per_g - ade_bef_per_g
+                            n_imp_g = int(np.sum(delta_g < 0))
+                            n_deg_g = int(np.sum(delta_g > 0))
+                            cat_g   = n_deg_g / max(n_imp_g, 1)
+                            epochs_run_g += 1
+                            print(f"  ep {ep_g+1}  cat_ratio={cat_g:.3f}")
+                            if cat_g > args.early_stop_cat_ratio:
+                                print(f"  [early-stop] cat_ratio={cat_g:.3f}")
+                                break
+
+                        ade_aft_g  = compute_ade(model_g, x_test_g, y_test_g, loader)
+                        delta_mm_g = ade_aft_g - ade_bef_g
+                        ade_2019_g = df_err[
+                            (df_err["model"] == "Seq2Seq") &
+                            (df_err["horizon"] == HORIZON) &
+                            (df_err["year"] == 2019)
+                        ]["ade_traj"].mean()
+                        ade_post_g = df_err[
+                            (df_err["model"] == "Seq2Seq") &
+                            (df_err["horizon"] == HORIZON) &
+                            (df_err["year"].isin([PROC_YEAR[n] for n in after_g]))
+                        ]["ade_traj"].mean()
+                        exc_g = ade_post_g - ade_2019_g
+                        rec_g = (-delta_mm_g / exc_g * 100.0
+                                 if abs(exc_g) > 0.1 else float("nan"))
+
+                        print(f"  ADE: {ade_bef_g:.4f} -> {ade_aft_g:.4f}  "
+                              f"delta={delta_mm_g:+.4f}  recovery={rec_g:.1f}%  "
+                              f"cat_ratio={cat_g:.3f}  epochs={epochs_run_g}")
+
+                        grid_results.append({
+                            "breakpoint_label":   bp_info_grid["bp_label"],
+                            "n_unfreeze":         nu,
+                            "lr":                 lr_g,
+                            "epochs_budget":      GRID_EPOCHS,
+                            "epochs_run":         epochs_run_g,
+                            "ade_before":         round(ade_bef_g, 4),
+                            "ade_after":          round(ade_aft_g, 4),
+                            "delta_mm":           round(delta_mm_g, 4),
+                            "recovery_pct":       round(rec_g, 2) if rec_g == rec_g else float("nan"),
+                            "catastrophic_ratio": round(cat_g, 3),
+                        })
+
+                if grid_results:
+                    df_grid = pd.DataFrame(grid_results)
+                    grid_path = OUT_DIR / "retrain_grid.csv"
+                    df_grid.to_csv(grid_path, index=False)
+                    print(f"\n[ok] {grid_path}")
+                    print(df_grid.to_string(index=False))
+                    best = df_grid.loc[df_grid["recovery_pct"].fillna(-999).idxmax()]
+                    print(f"\n[grid] Melhor config: n_unfreeze={best['n_unfreeze']}  "
+                          f"lr={best['lr']:.0e}  recovery={best['recovery_pct']:.1f}%  "
+                          f"cat_ratio={best['catastrophic_ratio']:.3f}")
 
 
 if __name__ == "__main__":
