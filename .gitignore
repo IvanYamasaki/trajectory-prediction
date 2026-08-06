@@ -51,3 +51,15 @@ Relas/results/drift/mes11_accel_battery/features_ext.parquet
 !dataset/position_series_params.pkl
 !dataset/heading_series_params.pkl
 !dataset/ball_positions_series_params.pkl
+
+# intermediarios de compilacao LaTeX
+*.aux
+*.bbl
+*.blg
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.toc
+*.nav
+*.snm
